@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "repotting_profiles.schema.json",
+  "title": "Repotting Profiles",
+  "description": "Baseline repotting profiles per plant: pot size, interval, best months.",
+  "type": "object",
+  "required": ["version", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "profiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "required": ["plantId", "displayName"],
+      "additionalProperties": true,
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": ["string", "null"],
+          "description": "Stable profile identifier. Defaults to the plantId when omitted."
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "currentPotSizeCm": {
+          "type": ["number", "null"],
+          "description": "Current pot diameter in cm."
+        },
+        "repottingIntervalYears": {
+          "type": ["array", "null"],
+          "items": { "type": "number", "minimum": 0.5 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] years between repottings."
+        },
+        "bestMonths": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "description": "Best months (1-12) for repotting."
+        },
+        "lastRepottedAt": {
+          "type": ["string", "null"],
+          "description": "ISO date of last repotting."
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

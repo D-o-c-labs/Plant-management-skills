@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config.schema.json",
+  "title": "Skill Configuration",
+  "description": "Per-installation configuration for the plant management skill: timezone, locale, push policies, evaluation defaults.",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": true,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "timezone": {
+      "type": "string",
+      "description": "IANA timezone for evaluation and scheduling, e.g. 'Europe/Rome'."
+    },
+    "locale": {
+      "type": "string",
+      "description": "Locale hint for AI message generation, e.g. 'it', 'en'."
+    },
+    "pushPolicy": {
+      "type": "object",
+      "description": "Controls how aggressively reminders are re-sent.",
+      "properties": {
+        "weekday": { "$ref": "#/$defs/dayPolicy" },
+        "weekend": { "$ref": "#/$defs/dayPolicy" }
+      }
+    },
+    "evaluationDefaults": {
+      "type": "object",
+      "properties": {
+        "weatherRequired": {
+          "type": "boolean",
+          "description": "If true, evaluation will fail without weather context."
+        },
+        "dryRunDefault": {
+          "type": "boolean",
+          "description": "If true, eval defaults to dry-run mode."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dayPolicy": {
+      "type": "object",
+      "properties": {
+        "activeHours": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 23 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[start, end] hours when reminders can be sent."
+        },
+        "minHoursBetweenPushes": {
+          "description": "Minimum hours between pushes. Can be a single number or an object mapping time ranges to hours.",
+          "oneOf": [
+            { "type": "integer", "minimum": 1 },
+            {
+              "type": "object",
+              "additionalProperties": { "type": "integer", "minimum": 1 }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

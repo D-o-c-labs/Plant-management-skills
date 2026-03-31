@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "locations.schema.json",
+  "title": "Locations",
+  "description": "Physical locations where plants are kept (balconies, rooms, etc.).",
+  "type": "object",
+  "required": ["version", "locations"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility checks."
+    },
+    "locations": {
+      "type": "array",
+      "description": "Array of location records.",
+      "items": {
+        "$ref": "#/$defs/location"
+      }
+    }
+  },
+  "$defs": {
+    "location": {
+      "type": "object",
+      "description": "A single physical location.",
+      "required": [
+        "locationId",
+        "displayName",
+        "type",
+        "indoorOutdoor"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "locationId": {
+          "type": "string",
+          "description": "Unique identifier for the location, e.g. 'rear_balcony'."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable name for the location."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["balcony", "room", "other"],
+          "description": "Category of the location."
+        },
+        "indoorOutdoor": {
+          "type": "string",
+          "enum": ["indoor", "outdoor"],
+          "description": "Whether this location is indoors or outdoors."
+        },
+        "exposure": {
+          "type": ["string", "null"],
+          "description": "Cardinal or intercardinal direction the location faces, e.g. 'west', 'south-east'."
+        },
+        "sunWindowDescription": {
+          "type": ["string", "null"],
+          "description": "Free-text description of the sun exposure window at this location."
+        },
+        "windExposure": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"],
+          "default": "unknown",
+          "description": "General wind exposure level at this location."
+        },
+        "rainExposure": {
+          "type": "string",
+          "enum": ["none", "low", "medium", "high", "unknown"],
+          "default": "unknown",
+          "description": "How much rain reaches plants at this location."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Free-text notes about this location."
+        }
+      }
+    }
+  }
+}

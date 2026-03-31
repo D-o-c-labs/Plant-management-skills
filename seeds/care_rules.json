@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "ruleId": "watering_profile_checks",
+      "enabled": true,
+      "type": "dynamic_check",
+      "action": "watering_check",
+      "scope": {
+        "locationIds": []
+      },
+      "pushUntilConfirmed": true,
+      "automaticCoverage": true,
+      "bootstrapIfNoHistory": true,
+      "messageStyle": "aggregated_soft_daily",
+      "notes": "Generic watering checks for all active plants that have a watering profile."
+    },
+    {
+      "ruleId": "fertilization_profile_alerts",
+      "enabled": true,
+      "type": "profile_based_alert",
+      "action": "fertilization_check",
+      "scope": {
+        "plantIds": []
+      },
+      "pushUntilConfirmed": true,
+      "automaticCoverage": true,
+      "bootstrapIfNoHistory": true,
+      "messageStyle": "aggregated_soft_daily",
+      "notes": "Generic fertilization alerts for any plant with a fertilization profile."
+    },
+    {
+      "ruleId": "neem_cycle_checks",
+      "enabled": false,
+      "type": "recurring_care",
+      "action": "neem",
+      "scope": {
+        "locationIds": [],
+        "requiredRiskFlagsAny": []
+      },
+      "cadence": {
+        "targetDays": 12,
+        "maximumDays": 15
+      },
+      "seasonAware": true,
+      "seasonPolicy": {
+        "disabledMonths": [11, 12, 1, 2],
+        "reducedMonths": [3, 10]
+      },
+      "pushUntilConfirmed": true,
+      "automaticCoverage": false,
+      "messageStyle": "aggregated_soft_daily",
+      "notes": "Disabled example neem rule. Customize scope before enabling."
+    }
+  ]
+}

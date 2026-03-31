@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fertilization_profiles.schema.json",
+  "title": "Fertilization Profiles",
+  "description": "Baseline fertilization profiles per plant: type, active months, interval.",
+  "type": "object",
+  "required": ["version", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "profiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "required": ["plantId", "displayName"],
+      "additionalProperties": true,
+      "properties": {
+        "plantId": {
+          "type": "string",
+          "description": "Reference to plant in plants.json."
+        },
+        "profileId": {
+          "type": ["string", "null"],
+          "description": "Stable profile identifier. Defaults to the plantId when omitted."
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "fertilizerType": {
+          "type": ["string", "null"],
+          "description": "Recommended fertilizer type or blend."
+        },
+        "activeMonths": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "description": "Months (1-12) when fertilization is active."
+        },
+        "intervalDays": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] interval in days between fertilization."
+        },
+        "cadenceDays": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Alias for intervalDays used by some hosts."
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

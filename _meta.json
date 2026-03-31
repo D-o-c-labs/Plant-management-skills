@@ -1,0 +1,25 @@
+{
+  "name": "plant-management",
+  "version": "0.1.0",
+  "description": "Track and care for household plants — registry, profiles, evaluation engine, reminders, and species lookups.",
+  "author": "Doc",
+  "license": "MIT",
+  "tags": ["plants", "gardening", "care", "reminders", "home"],
+  "requires": {
+    "env": ["PLANT_DATA_DIR"],
+    "bins": ["python3"]
+  },
+  "optional_env": [
+    "PLANT_TIMEZONE",
+    "PLANT_LOCALE",
+    "TREFLE_API_KEY",
+    "PERENUAL_API_KEY",
+    "OPENPLANTBOOK_CLIENT_ID",
+    "OPENPLANTBOOK_CLIENT_SECRET",
+    "TAVILY_API_KEY"
+  ],
+  "entrypoints": {
+    "skill": "SKILL.md",
+    "cli": "scripts/plant_mgmt_cli.py"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events.schema.json",
+  "title": "Care Events",
+  "description": "Historical log of care events, observations, and confirmations.",
+  "type": "object",
+  "required": ["version", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/event" }
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["eventId", "timestamp", "type", "source"],
+      "additionalProperties": true,
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "description": "Unique event identifier, e.g. 'evt_<uuid>'."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO 8601 timestamp when the event was recorded."
+        },
+        "type": {
+          "type": "string",
+          "description": "Event type: watering_confirmed, neem_confirmed, fertilization_confirmed, rain_confirmed, photo_received, observation, plant_added, plant_archived, etc."
+        },
+        "source": {
+          "type": "string",
+          "description": "How this event was recorded: user_free_text, agent_inference, system, manual_update."
+        },
+        "effectiveDateLocal": {
+          "type": ["string", "null"],
+          "description": "Local date (YYYY-MM-DD) when the event actually happened (may differ from recording timestamp)."
+        },
+        "effectivePrecision": {
+          "type": "string",
+          "enum": ["day", "part_of_day", "hour", "exact"],
+          "description": "How precisely the effective time is known."
+        },
+        "effectivePartOfDay": {
+          "type": ["string", "null"],
+          "enum": ["morning", "afternoon", "evening", "night", null],
+          "description": "Part of day, when precision is 'part_of_day'."
+        },
+        "scope": {
+          "type": ["string", "null"],
+          "description": "Scope description, e.g. 'all_active_plants_in_rear_balcony', 'single_plant'."
+        },
+        "locationId": {
+          "type": ["string", "null"],
+          "description": "Location associated with this event."
+        },
+        "plantIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Plant IDs affected by this event."
+        },
+        "details": {
+          "type": "object",
+          "description": "Event-type-specific details.",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

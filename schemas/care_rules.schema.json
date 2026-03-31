@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "care_rules.schema.json",
+  "title": "Care Rules",
+  "description": "Configurable care rules that drive the evaluation engine. Each rule defines scope, conditions, and push behavior for a care category.",
+  "type": "object",
+  "required": ["version", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/rule" }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": ["ruleId", "enabled", "type"],
+      "additionalProperties": true,
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "description": "Unique stable identifier for this rule."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this rule is currently active."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["recurring_care", "dynamic_check", "profile_based_alert"],
+          "description": "Rule type: recurring_care (fixed cadence), dynamic_check (condition-based), profile_based_alert (profile-driven)."
+        },
+        "scope": {
+          "type": "object",
+          "description": "Defines which plants/locations this rule applies to. Structure varies by rule type.",
+          "additionalProperties": true
+        },
+        "action": {
+          "type": "string",
+          "description": "Action identifier, e.g. 'apply_neem_oil'."
+        },
+        "cadence": {
+          "type": "object",
+          "description": "Cadence settings for recurring_care rules.",
+          "properties": {
+            "minimumDays": { "type": "integer", "minimum": 1 },
+            "targetDays": { "type": "integer", "minimum": 1 },
+            "maximumDays": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "seasonAware": {
+          "type": "boolean"
+        },
+        "seasonPolicy": {
+          "type": "object",
+          "properties": {
+            "disabledMonths": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 1, "maximum": 12 }
+            },
+            "reducedMonths": {
+              "type": "array",
+              "items": { "type": "integer", "minimum": 1, "maximum": 12 }
+            }
+          }
+        },
+        "conditions": {
+          "type": "object",
+          "description": "Evaluation conditions for dynamic_check rules.",
+          "additionalProperties": true
+        },
+        "profileFile": {
+          "type": "string",
+          "description": "Profile JSON filename for profile_based_alert rules."
+        },
+        "pushUntilConfirmed": {
+          "type": "boolean",
+          "description": "Whether to keep pushing reminders until user confirms."
+        },
+        "automaticCoverage": {
+          "type": "boolean",
+          "description": "Whether new matching plants are automatically included."
+        },
+        "resendPolicy": {
+          "type": "object",
+          "properties": {
+            "defaultMinimumHours": { "type": "integer", "minimum": 1 },
+            "sameDayNoDuplicate": { "type": "boolean" }
+          }
+        },
+        "messageStyle": {
+          "type": "string",
+          "description": "Preferred message style hint, e.g. 'aggregated_soft_daily'."
+        },
+        "bootstrapIfNoHistory": {
+          "type": "boolean"
+        },
+        "bootstrapPolicy": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

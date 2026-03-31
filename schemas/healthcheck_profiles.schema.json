@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "healthcheck_profiles.schema.json",
+  "title": "Health Check Profiles",
+  "description": "Health check cadence and focus areas per plant.",
+  "type": "object",
+  "required": ["version", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "profiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "required": ["plantId", "displayName"],
+      "additionalProperties": true,
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": ["string", "null"],
+          "description": "Stable profile identifier. Defaults to the plantId when omitted."
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "checkCadenceDays": {
+          "type": ["array", "null"],
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[min, max] days between health checks."
+        },
+        "focusAreas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "What to look for during checks, e.g. 'leaf_color', 'new_growth'."
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

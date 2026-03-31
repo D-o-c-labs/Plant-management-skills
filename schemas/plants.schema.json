@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "plants.schema.json",
+  "title": "Plants Registry",
+  "description": "Master list of all plants managed by the system, including species info, location, irrigation, and profile references.",
+  "type": "object",
+  "required": ["version", "nextPlantNumericId", "plants"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility checks."
+    },
+    "nextPlantNumericId": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Auto-incrementing counter used to mint the next plant_NNN id."
+    },
+    "plants": {
+      "type": "array",
+      "description": "Array of plant records.",
+      "items": {
+        "$ref": "#/$defs/plant"
+      }
+    }
+  },
+  "$defs": {
+    "plant": {
+      "type": "object",
+      "description": "A single plant record.",
+      "required": [
+        "plantId",
+        "displayName",
+        "speciesCommonName",
+        "speciesConfidence",
+        "status",
+        "locationId",
+        "subLocationId",
+        "indoorOutdoor",
+        "irrigationMode",
+        "attachedToIrrigation",
+        "riskFlags"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plantId": {
+          "type": "string",
+          "pattern": "^plant_\\d{3,}$",
+          "description": "Unique identifier for the plant, e.g. plant_001."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable name shown in reminders and reports."
+        },
+        "speciesCommonName": {
+          "type": ["string", "null"],
+          "description": "Common name of the species in English, e.g. 'lemon'."
+        },
+        "speciesScientificName": {
+          "type": ["string", "null"],
+          "description": "Latin binomial when known, e.g. 'Citrus limon'."
+        },
+        "speciesConfidence": {
+          "type": "string",
+          "enum": ["known", "likely", "unknown"],
+          "description": "How confident we are about the species identification."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "recovering", "archived", "dead", "gifted", "propagated"],
+          "description": "Current lifecycle status of the plant."
+        },
+        "locationId": {
+          "type": "string",
+          "description": "Reference to a location in locations.json."
+        },
+        "subLocationId": {
+          "type": ["string", "null"],
+          "description": "Reference to a microzone in microzones.json (may be null if not yet assigned)."
+        },
+        "indoorOutdoor": {
+          "type": "string",
+          "enum": ["indoor", "outdoor"],
+          "description": "Whether the plant is kept indoors or outdoors."
+        },
+        "irrigationMode": {
+          "type": "string",
+          "enum": ["manual", "automatic", "mixed"],
+          "description": "How this plant is watered: manually, via an irrigation system, or a mix."
+        },
+        "irrigationSystemId": {
+          "type": ["string", "null"],
+          "description": "Reference to an irrigation system in irrigation_systems.json, if applicable."
+        },
+        "attachedToIrrigation": {
+          "type": "boolean",
+          "description": "Whether this plant is physically connected to an irrigation system."
+        },
+        "irrigationEffectiveState": {
+          "type": ["string", "null"],
+          "enum": ["active", "attached_but_system_off", "not_attached", "manual_only", null],
+          "description": "Runtime-computed effective irrigation state considering both attachment and system enablement."
+        },
+        "wateringProfileId": {
+          "type": ["string", "null"],
+          "description": "Reference to watering profile in watering_profiles.json. By default profile IDs match the target plantId."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Free-text notes about this plant."
+        },
+        "riskFlags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of active risk flags, e.g. 'overwatering_risk', 'heat_stress'."
+        },
+        "fertilizationProfileId": {
+          "type": ["string", "null"],
+          "description": "Reference to fertilization profile. By default profile IDs match the target plantId."
+        },
+        "repottingProfileId": {
+          "type": ["string", "null"],
+          "description": "Reference to repotting profile. By default profile IDs match the target plantId."
+        },
+        "pestProfileId": {
+          "type": ["string", "null"],
+          "description": "Reference to pest management profile. By default profile IDs match the target plantId."
+        },
+        "maintenanceProfileId": {
+          "type": ["string", "null"],
+          "description": "Reference to maintenance profile. By default profile IDs match the target plantId."
+        },
+        "healthCheckProfileId": {
+          "type": ["string", "null"],
+          "description": "Reference to health-check profile. By default profile IDs match the target plantId."
+        },
+        "sharedWateringGroupId": {
+          "type": ["string", "null"],
+          "description": "Group ID for plants that share a pot or watering container."
+        }
+      }
+    }
+  }
+}

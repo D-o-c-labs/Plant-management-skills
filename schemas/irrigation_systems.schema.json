@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "irrigation_systems.schema.json",
+  "title": "Irrigation Systems",
+  "description": "Automated or semi-automated irrigation systems attached to one or more locations.",
+  "type": "object",
+  "required": ["version", "irrigationSystems"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility checks."
+    },
+    "irrigationSystems": {
+      "type": "array",
+      "description": "Array of irrigation system records.",
+      "items": {
+        "$ref": "#/$defs/irrigationSystem"
+      }
+    }
+  },
+  "$defs": {
+    "irrigationSystem": {
+      "type": "object",
+      "description": "A single irrigation system.",
+      "required": [
+        "irrigationSystemId",
+        "locationId",
+        "enabled",
+        "controlMode",
+        "runoffRisk"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "irrigationSystemId": {
+          "type": "string",
+          "description": "Unique identifier for the irrigation system."
+        },
+        "locationId": {
+          "type": "string",
+          "description": "Reference to the location where this system is installed."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the irrigation system is currently turned on."
+        },
+        "controlMode": {
+          "type": "string",
+          "enum": ["manual_only", "advisory", "backend_controlled"],
+          "description": "How the system is controlled: purely manual, advisory suggestions to the user, or fully automated via a backend."
+        },
+        "timerType": {
+          "type": ["string", "null"],
+          "description": "Type of timer hardware, e.g. 'dumb_timer', 'smart_controller'."
+        },
+        "baselineSchedule": {
+          "type": ["string", "null"],
+          "description": "Description of the default schedule when running normally."
+        },
+        "seasonProfile": {
+          "type": ["string", "null"],
+          "description": "Current seasonal configuration state, e.g. 'summer_active', 'not_configured'."
+        },
+        "supportsMultipleDailyRuns": {
+          "type": ["boolean", "null"],
+          "description": "Whether the timer hardware supports more than one run per day."
+        },
+        "minimumDurationStep": {
+          "type": ["string", "null"],
+          "description": "Smallest duration increment the timer supports, e.g. '1min'."
+        },
+        "maximumSafeDuration": {
+          "type": ["string", "null"],
+          "description": "Longest safe single-run duration before runoff becomes a concern."
+        },
+        "runoffRisk": {
+          "type": "string",
+          "enum": ["low", "medium", "high"],
+          "description": "Overall risk of water runoff when this system operates."
+        },
+        "coverageNotes": {
+          "type": ["string", "null"],
+          "description": "Free-text notes on which plants and areas the system covers."
+        },
+        "knownWeakSpots": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of known coverage gaps or problem areas."
+        },
+        "manualExceptionPlantIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Plant IDs that are physically on the system but require manual watering exceptions."
+        },
+        "lastReviewAt": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "ISO-8601 timestamp of the last system review."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Free-text notes about this irrigation system."
+        }
+      }
+    }
+  }
+}

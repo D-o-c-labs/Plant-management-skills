@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "maintenance_profiles.schema.json",
+  "title": "Maintenance Profiles",
+  "description": "Pruning, cleaning, and general maintenance profiles per plant.",
+  "type": "object",
+  "required": ["version", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "profiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/profile" }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "required": ["plantId", "displayName"],
+      "additionalProperties": true,
+      "properties": {
+        "plantId": {
+          "type": "string"
+        },
+        "profileId": {
+          "type": ["string", "null"],
+          "description": "Stable profile identifier. Defaults to the plantId when omitted."
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "pruningMonths": {
+          "type": ["array", "null"],
+          "items": { "type": "integer", "minimum": 1, "maximum": 12 },
+          "description": "Recommended pruning months (1-12)."
+        },
+        "cleaningCadenceDays": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Days between leaf cleaning (mainly indoor plants)."
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

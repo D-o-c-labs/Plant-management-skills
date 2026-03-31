@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "model": {
+    "principle": "Use species/plant baseline as the default seasonal watering profile. Apply exposure, weather, wind, heat, pot behavior, irrigation state, and microzone as runtime modifiers during reminder evaluation.",
+    "levels": ["very_low", "low", "medium", "high", "very_high"],
+    "notes": "These are baselines. Reminder logic must evaluate real conditions and confirmation state."
+  },
+  "profiles": []
+}

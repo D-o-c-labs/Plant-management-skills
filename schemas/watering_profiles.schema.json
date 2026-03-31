@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "watering_profiles.schema.json",
+  "title": "Watering Profiles",
+  "description": "Per-plant watering needs expressed as seasonal baselines with adjustment notes.",
+  "type": "object",
+  "required": ["version", "model", "profiles"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility checks."
+    },
+    "model": {
+      "$ref": "#/$defs/wateringModel",
+      "description": "Describes the watering-level model shared across all profiles."
+    },
+    "profiles": {
+      "type": "array",
+      "description": "Array of per-plant watering profiles.",
+      "items": {
+        "$ref": "#/$defs/wateringProfile"
+      }
+    }
+  },
+  "$defs": {
+    "wateringModel": {
+      "type": "object",
+      "description": "The conceptual model behind watering levels.",
+      "required": ["principle", "levels"],
+      "additionalProperties": false,
+      "properties": {
+        "principle": {
+          "type": "string",
+          "description": "High-level description of the watering philosophy."
+        },
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["very_low", "low", "medium", "high", "very_high"]
+          },
+          "description": "Ordered list of watering intensity levels from lowest to highest."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Additional notes on how levels are interpreted."
+        }
+      }
+    },
+    "seasonalBaseline": {
+      "type": "object",
+      "description": "Watering baseline for a single season.",
+      "required": ["level", "baseIntervalDays"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["very_low", "low", "medium", "high", "very_high"],
+          "description": "Watering intensity level for this season."
+        },
+        "baseIntervalDays": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Min and max interval in days between waterings, e.g. [2, 4]."
+        }
+      }
+    },
+    "wateringProfile": {
+      "type": "object",
+      "description": "Watering profile for a single plant.",
+      "required": ["plantId", "displayName", "baselineSource", "seasonalBaseline"],
+      "additionalProperties": false,
+      "properties": {
+        "plantId": {
+          "type": "string",
+          "description": "Reference to the plant in plants.json."
+        },
+        "profileId": {
+          "type": ["string", "null"],
+          "description": "Stable profile identifier. Defaults to the plantId when omitted."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable plant name (denormalized for convenience)."
+        },
+        "baselineSource": {
+          "type": "string",
+          "description": "Source or rationale for the baseline, e.g. 'potted lemon / container citrus'."
+        },
+        "seasonalBaseline": {
+          "type": "object",
+          "description": "Watering baselines keyed by season.",
+          "required": ["winter", "spring", "summer", "autumn"],
+          "additionalProperties": false,
+          "properties": {
+            "winter": { "$ref": "#/$defs/seasonalBaseline" },
+            "spring": { "$ref": "#/$defs/seasonalBaseline" },
+            "summer": { "$ref": "#/$defs/seasonalBaseline" },
+            "autumn": { "$ref": "#/$defs/seasonalBaseline" }
+          }
+        },
+        "runtimeAdjustmentNotes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Notes describing how to adjust intervals at runtime based on weather, soil state, etc."
+        }
+      }
+    }
+  }
+}

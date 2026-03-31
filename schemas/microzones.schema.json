@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "microzones.schema.json",
+  "title": "Microzones",
+  "description": "Sub-areas within a location that have distinct micro-environmental conditions (light, heat, wind, etc.).",
+  "type": "object",
+  "required": ["version", "microzones"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility checks."
+    },
+    "microzones": {
+      "type": "array",
+      "description": "Array of microzone records.",
+      "items": {
+        "$ref": "#/$defs/microzone"
+      }
+    }
+  },
+  "$defs": {
+    "microzone": {
+      "type": "object",
+      "description": "A single microzone within a location.",
+      "required": [
+        "microzoneId",
+        "locationId",
+        "displayName"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "microzoneId": {
+          "type": "string",
+          "description": "Unique identifier for the microzone, e.g. 'rear_balcony_living'."
+        },
+        "locationId": {
+          "type": "string",
+          "description": "Reference to the parent location in locations.json."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable name for the microzone."
+        },
+        "lightClass": {
+          "type": "string",
+          "enum": ["full_sun", "partial_sun", "bright_shade", "medium", "mixed", "unknown"],
+          "default": "unknown",
+          "description": "Predominant light classification for this microzone."
+        },
+        "heatLoad": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"],
+          "default": "unknown",
+          "description": "How much accumulated heat this microzone experiences (e.g. from reflected surfaces)."
+        },
+        "dryingSpeed": {
+          "type": "string",
+          "enum": ["low", "slow", "medium", "fast", "high", "unknown"],
+          "default": "unknown",
+          "description": "How quickly soil and foliage dry out in this microzone."
+        },
+        "windExposure": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "unknown"],
+          "default": "unknown",
+          "description": "Wind exposure level in this microzone."
+        },
+        "runoffSensitivity": {
+          "type": "string",
+          "enum": ["none", "low", "medium", "high", "unknown"],
+          "default": "unknown",
+          "description": "Risk of water runoff affecting neighbours or surfaces below."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Free-text notes about this microzone."
+        }
+      }
+    }
+  }
+}

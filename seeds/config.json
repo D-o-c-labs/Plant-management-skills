@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "timezone": "UTC",
+  "locale": "en",
+  "pushPolicy": {
+    "weekday": {
+      "activeHours": [7, 23],
+      "minHoursBetweenPushes": {
+        "0700-1659": 6,
+        "1700-2300": 2
+      }
+    },
+    "weekend": {
+      "activeHours": [7, 23],
+      "minHoursBetweenPushes": 2
+    }
+  },
+  "evaluationDefaults": {
+    "weatherRequired": false,
+    "dryRunDefault": false
+  }
+}
