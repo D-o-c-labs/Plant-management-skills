@@ -9,7 +9,7 @@
   "properties": {
     "version": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "tasks": {
       "type": "object",
@@ -30,7 +30,7 @@
       "properties": {
         "taskId": {
           "type": "string",
-          "description": "Stable task identifier, e.g. 'watering_check:plant_001'."
+          "description": "Stable task identifier, e.g. 'watering_check:watering_profiles:plant_001'."
         },
         "type": {
           "type": "string",
@@ -81,6 +81,18 @@
         "confirmationEventId": {
           "type": ["string", "null"],
           "description": "Reference to the event that confirmed/closed this task."
+        },
+        "managedByRuleId": {
+          "type": ["string", "null"],
+          "description": "Rule ID that owns this task for evaluation and expiry."
+        },
+        "programId": {
+          "type": ["string", "null"],
+          "description": "Program identifier when the task comes from a recurring profile program."
+        },
+        "confirmEventType": {
+          "type": ["string", "null"],
+          "description": "Canonical event type to log when this task is confirmed."
         }
       }
     }

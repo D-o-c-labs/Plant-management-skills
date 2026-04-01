@@ -55,6 +55,11 @@ def _save_cache(cache):
     except EnvironmentError:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
+    cache = {
+        key: value
+        for key, value in cache.items()
+        if not (isinstance(value, dict) and value.get("found") is False)
+    }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=2, ensure_ascii=False)
         f.write("\n")
@@ -62,12 +67,18 @@ def _save_cache(cache):
 
 def _get_cached_result(kind, query):
     cache = _load_cache()
-    return cache.get(_cache_key(kind, query))
+    result = cache.get(_cache_key(kind, query))
+    if isinstance(result, dict) and result.get("found") is False:
+        return None
+    return result
 
 
 def _set_cached_result(kind, query, result):
     cache = _load_cache()
-    cache[_cache_key(kind, query)] = result
+    if isinstance(result, dict) and result.get("found") is False:
+        cache.pop(_cache_key(kind, query), None)
+    else:
+        cache[_cache_key(kind, query)] = result
     _save_cache(cache)
 
 
@@ -359,7 +370,6 @@ def search(query):
             return result
 
     result = _empty_result(query)
-    _set_cached_result("search", query, result)
     return result
 
 
@@ -407,7 +417,6 @@ def search_care(query):
             return result
 
     result = _empty_result(query)
-    _set_cached_result("care", query, result)
     return result
 
 

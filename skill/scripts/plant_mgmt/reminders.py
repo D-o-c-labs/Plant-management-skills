@@ -13,6 +13,7 @@ TASK_CONFIRM_EVENT_TYPES = {
     "repotting_check": "repotting_confirmed",
     "healthcheck_check": "healthcheck_confirmed",
     "maintenance_check": "maintenance_confirmed",
+    "pruning_check": "pruning_confirmed",
 }
 
 
@@ -38,7 +39,9 @@ def get_task(task_id):
 
 
 def open_task(*, task_id, task_type, plant_id=None, location_id=None,
-              sublocation_id=None, reason=None, due_at=None):
+              sublocation_id=None, reason=None, due_at=None,
+              managed_by_rule_id=None, program_id=None,
+              confirm_event_type=None):
     """Open a new reminder task (or update existing if same ID)."""
     data = store.read("reminder_state.json")
 
@@ -51,6 +54,12 @@ def open_task(*, task_id, task_type, plant_id=None, location_id=None,
         existing["lastReason"] = reason or existing.get("lastReason")
         if due_at:
             existing["dueAt"] = due_at
+        if managed_by_rule_id is not None:
+            existing["managedByRuleId"] = managed_by_rule_id
+        if program_id is not None:
+            existing["programId"] = program_id
+        if confirm_event_type is not None:
+            existing["confirmEventType"] = confirm_event_type
         data["tasks"][task_id] = existing
     else:
         # Create new task
@@ -68,6 +77,9 @@ def open_task(*, task_id, task_type, plant_id=None, location_id=None,
             "lastReason": reason,
             "pushCount": 0,
             "confirmationEventId": None,
+            "managedByRuleId": managed_by_rule_id,
+            "programId": program_id,
+            "confirmEventType": confirm_event_type,
         }
 
     store.write("reminder_state.json", data)
@@ -97,9 +109,14 @@ def confirm_task(task_id, *, details=None):
     task = data["tasks"].get(task_id)
     if not task:
         raise ValueError(f"Task not found: {task_id}")
+    if task["status"] != "open":
+        raise ValueError(f"Only open tasks can be confirmed: {task_id}")
 
     # Log confirmation event
-    event_type = TASK_CONFIRM_EVENT_TYPES.get(task["type"], f"{task['type']}_confirmed")
+    event_type = (
+        task.get("confirmEventType")
+        or TASK_CONFIRM_EVENT_TYPES.get(task["type"], f"{task['type']}_confirmed")
+    )
     event = events_mod.log_event(
         event_type=event_type,
         source="user_free_text",

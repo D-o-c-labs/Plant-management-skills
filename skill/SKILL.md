@@ -134,7 +134,7 @@ Common event types:
 
 ### Reminders
 
-Use `reminders confirm` when the user is confirming an existing reminder task. This command automatically logs the canonical care event for the task type.
+Use `reminders confirm` when the user is confirming an existing reminder task. This command automatically logs the canonical care event stored on the task, so custom recurring programs do not need Python changes.
 
 ```bash
 python3 scripts/plant_mgmt_cli.py reminders list [--status open|done|expired|cancelled]
@@ -143,6 +143,11 @@ python3 scripts/plant_mgmt_cli.py reminders confirm <taskId> [--details "Watered
 python3 scripts/plant_mgmt_cli.py reminders cancel <taskId> [--reason "Heavy rain made this irrelevant"]
 python3 scripts/plant_mgmt_cli.py reminders reset
 ```
+
+Reminder task IDs are rule-scoped and may also include a program ID:
+
+- `watering_check:watering_profiles:plant_001`
+- `neem_treatment:pest_recurring_programs:plant_001:neem_cycle`
 
 ### Evaluation
 
@@ -233,7 +238,8 @@ Prefer onboarding one location at a time.
 - `plants.json` is the registry source of truth.
 - `locations.json`, `microzones.json`, and `irrigation_systems.json` provide environmental context.
 - Each profile file stores one profile object per plant by default.
-- `care_rules.json` contains the evaluator rules. The seed data ships with generic watering/fertilization rules enabled and a neem rule example disabled.
+- `care_rules.json` contains generic evaluator bindings between rule engines, profile families, and task behavior.
+- `pest_profiles.json` can contain `recurringPrograms` such as neem cycles or other preventive/treatment routines.
 - `reminder_state.json` tracks active and historical tasks.
 - `events.json` records care history.
 

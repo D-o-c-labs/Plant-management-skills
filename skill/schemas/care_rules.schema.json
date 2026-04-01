@@ -2,107 +2,200 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "care_rules.schema.json",
   "title": "Care Rules",
-  "description": "Configurable care rules that drive the evaluation engine. Each rule defines scope, conditions, and push behavior for a care category.",
+  "description": "Generic evaluation rules that bind the engine to profile families, history, filters, and output behavior.",
   "type": "object",
   "required": ["version", "rules"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "rules": {
       "type": "array",
-      "items": { "$ref": "#/$defs/rule" }
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
     }
   },
   "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "dayInterval": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "monthArray": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 12
+      }
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "statuses": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "plantIds": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "locationIds": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "subLocationIds": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "requiredRiskFlagsAny": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "requiredRiskFlagsAll": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "excludedRiskFlagsAny": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "indoorOutdoor": {
+          "type": "string"
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventTypes": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "confirmEventType": {
+          "type": "string"
+        }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seasonalIntervalsField": {
+          "type": "string"
+        },
+        "seasonalIntervalField": {
+          "type": "string"
+        },
+        "intervalFields": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "activeMonthsField": {
+          "type": "string"
+        },
+        "disabledMonthsField": {
+          "type": "string"
+        },
+        "reducedMonthsField": {
+          "type": "string"
+        },
+        "programsField": {
+          "type": "string"
+        },
+        "anchorField": {
+          "type": "string"
+        },
+        "intervalUnit": {
+          "type": "string",
+          "enum": ["days", "years"]
+        },
+        "requireExplicitInterval": {
+          "type": "boolean"
+        },
+        "fallbackIntervalDays": {
+          "$ref": "#/$defs/dayInterval"
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "suggestedAction": {
+          "type": "string"
+        },
+        "recoveringSuggestedAction": {
+          "type": "string"
+        },
+        "recoveringMinimumUrgency": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "defaultConfidence": {
+          "type": "string"
+        },
+        "confidenceWhenWeatherProvided": {
+          "type": "string"
+        },
+        "confidenceWithoutWeather": {
+          "type": "string"
+        },
+        "reducedMonthUrgency": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "noHistoryReason": {
+          "type": "string"
+        },
+        "programNoHistoryReason": {
+          "type": "string"
+        },
+        "windowUrgency": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        }
+      }
+    },
     "rule": {
       "type": "object",
-      "required": ["ruleId", "enabled", "type"],
-      "additionalProperties": true,
+      "required": ["ruleId", "enabled", "engine", "profileType", "taskType", "history", "schedule"],
+      "additionalProperties": false,
       "properties": {
         "ruleId": {
-          "type": "string",
-          "description": "Unique stable identifier for this rule."
+          "type": "string"
         },
         "enabled": {
-          "type": "boolean",
-          "description": "Whether this rule is currently active."
-        },
-        "type": {
-          "type": "string",
-          "enum": ["recurring_care", "dynamic_check", "profile_based_alert"],
-          "description": "Rule type: recurring_care (fixed cadence), dynamic_check (condition-based), profile_based_alert (profile-driven)."
-        },
-        "scope": {
-          "type": "object",
-          "description": "Defines which plants/locations this rule applies to. Structure varies by rule type.",
-          "additionalProperties": true
-        },
-        "action": {
-          "type": "string",
-          "description": "Action identifier, e.g. 'apply_neem_oil'."
-        },
-        "cadence": {
-          "type": "object",
-          "description": "Cadence settings for recurring_care rules.",
-          "properties": {
-            "minimumDays": { "type": "integer", "minimum": 1 },
-            "targetDays": { "type": "integer", "minimum": 1 },
-            "maximumDays": { "type": "integer", "minimum": 1 }
-          }
-        },
-        "seasonAware": {
           "type": "boolean"
         },
-        "seasonPolicy": {
-          "type": "object",
-          "properties": {
-            "disabledMonths": {
-              "type": "array",
-              "items": { "type": "integer", "minimum": 1, "maximum": 12 }
-            },
-            "reducedMonths": {
-              "type": "array",
-              "items": { "type": "integer", "minimum": 1, "maximum": 12 }
-            }
-          }
-        },
-        "conditions": {
-          "type": "object",
-          "description": "Evaluation conditions for dynamic_check rules.",
-          "additionalProperties": true
-        },
-        "profileFile": {
+        "engine": {
           "type": "string",
-          "description": "Profile JSON filename for profile_based_alert rules."
+          "enum": ["seasonal_profile_interval", "profile_interval", "profile_program_interval", "profile_month_window"]
         },
-        "pushUntilConfirmed": {
-          "type": "boolean",
-          "description": "Whether to keep pushing reminders until user confirms."
-        },
-        "automaticCoverage": {
-          "type": "boolean",
-          "description": "Whether new matching plants are automatically included."
-        },
-        "resendPolicy": {
-          "type": "object",
-          "properties": {
-            "defaultMinimumHours": { "type": "integer", "minimum": 1 },
-            "sameDayNoDuplicate": { "type": "boolean" }
-          }
-        },
-        "messageStyle": {
+        "profileType": {
           "type": "string",
-          "description": "Preferred message style hint, e.g. 'aggregated_soft_daily'."
+          "enum": ["watering", "fertilization", "repotting", "pest", "maintenance", "healthcheck"]
         },
-        "bootstrapIfNoHistory": {
-          "type": "boolean"
+        "taskType": {
+          "type": "string"
         },
-        "bootstrapPolicy": {
-          "type": "object",
-          "additionalProperties": true
+        "filters": {
+          "$ref": "#/$defs/filters"
+        },
+        "history": {
+          "$ref": "#/$defs/history"
+        },
+        "schedule": {
+          "$ref": "#/$defs/schedule"
+        },
+        "outputs": {
+          "$ref": "#/$defs/outputs"
         },
         "notes": {
           "type": ["string", "null"]

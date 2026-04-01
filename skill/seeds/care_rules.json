@@ -1,56 +1,185 @@
 {
-  "version": 1,
+  "version": 2,
   "rules": [
     {
-      "ruleId": "watering_profile_checks",
+      "ruleId": "watering_profiles",
       "enabled": true,
-      "type": "dynamic_check",
-      "action": "watering_check",
-      "scope": {
+      "engine": "seasonal_profile_interval",
+      "profileType": "watering",
+      "taskType": "watering_check",
+      "filters": {
+        "statuses": ["active", "recovering"],
         "locationIds": []
       },
-      "pushUntilConfirmed": true,
-      "automaticCoverage": true,
-      "bootstrapIfNoHistory": true,
-      "messageStyle": "aggregated_soft_daily",
-      "notes": "Generic watering checks for all active plants that have a watering profile."
+      "history": {
+        "eventTypes": ["watering_confirmed", "rain_confirmed"],
+        "confirmEventType": "watering_confirmed"
+      },
+      "schedule": {
+        "seasonalIntervalsField": "seasonalBaseline",
+        "seasonalIntervalField": "baseIntervalDays",
+        "fallbackIntervalDays": [7, 14]
+      },
+      "outputs": {
+        "suggestedAction": "water_if_dry",
+        "recoveringSuggestedAction": "check_soil_first",
+        "recoveringMinimumUrgency": "medium",
+        "confidenceWhenWeatherProvided": "high",
+        "confidenceWithoutWeather": "medium"
+      },
+      "notes": "Generic watering checks for any plant with a watering profile."
     },
     {
-      "ruleId": "fertilization_profile_alerts",
+      "ruleId": "fertilization_profiles",
       "enabled": true,
-      "type": "profile_based_alert",
-      "action": "fertilization_check",
-      "scope": {
+      "engine": "profile_interval",
+      "profileType": "fertilization",
+      "taskType": "fertilization_check",
+      "filters": {
+        "statuses": ["active", "recovering"],
         "plantIds": []
       },
-      "pushUntilConfirmed": true,
-      "automaticCoverage": true,
-      "bootstrapIfNoHistory": true,
-      "messageStyle": "aggregated_soft_daily",
-      "notes": "Generic fertilization alerts for any plant with a fertilization profile."
+      "history": {
+        "eventTypes": ["fertilization_confirmed"],
+        "confirmEventType": "fertilization_confirmed"
+      },
+      "schedule": {
+        "intervalFields": ["cadenceDays", "intervalDays"],
+        "activeMonthsField": "activeMonths",
+        "fallbackIntervalDays": [25, 35]
+      },
+      "outputs": {
+        "suggestedAction": "fertilize",
+        "defaultConfidence": "high"
+      },
+      "notes": "Generic fertilization checks for any plant with a fertilization profile."
     },
     {
-      "ruleId": "neem_cycle_checks",
-      "enabled": false,
-      "type": "recurring_care",
-      "action": "neem",
-      "scope": {
-        "locationIds": [],
-        "requiredRiskFlagsAny": []
+      "ruleId": "pest_recurring_programs",
+      "enabled": true,
+      "engine": "profile_program_interval",
+      "profileType": "pest",
+      "taskType": "pest_program",
+      "filters": {
+        "statuses": ["active", "recovering"]
       },
-      "cadence": {
-        "targetDays": 12,
-        "maximumDays": 15
+      "history": {},
+      "schedule": {
+        "programsField": "recurringPrograms",
+        "intervalFields": ["cadenceDays", "intervalDays"],
+        "activeMonthsField": "activeMonths",
+        "disabledMonthsField": "disabledMonths",
+        "reducedMonthsField": "reducedMonths",
+        "fallbackIntervalDays": [7, 14]
       },
-      "seasonAware": true,
-      "seasonPolicy": {
-        "disabledMonths": [11, 12, 1, 2],
-        "reducedMonths": [3, 10]
+      "outputs": {
+        "defaultConfidence": "high",
+        "reducedMonthUrgency": "low"
       },
-      "pushUntilConfirmed": true,
-      "automaticCoverage": false,
-      "messageStyle": "aggregated_soft_daily",
-      "notes": "Disabled example neem rule. Customize scope before enabling."
+      "notes": "Generic recurring pest-prevention or treatment programs declared inside pest profiles."
+    },
+    {
+      "ruleId": "repotting_profiles",
+      "enabled": true,
+      "engine": "profile_interval",
+      "profileType": "repotting",
+      "taskType": "repotting_check",
+      "filters": {
+        "statuses": ["active", "recovering"]
+      },
+      "history": {
+        "eventTypes": ["repotting_confirmed"],
+        "confirmEventType": "repotting_confirmed"
+      },
+      "schedule": {
+        "intervalFields": ["repottingIntervalYears"],
+        "intervalUnit": "years",
+        "anchorField": "lastRepottedAt",
+        "activeMonthsField": "bestMonths",
+        "requireExplicitInterval": true,
+        "fallbackIntervalDays": [365, 730]
+      },
+      "outputs": {
+        "suggestedAction": "repot_if_rootbound",
+        "defaultConfidence": "medium",
+        "noHistoryReason": "No repotting history — review pot size and roots during the preferred season."
+      },
+      "notes": "Repotting checks use profile intervals, prefer the configured best months, and fall back to the profile anchor date when needed."
+    },
+    {
+      "ruleId": "maintenance_cleaning_profiles",
+      "enabled": true,
+      "engine": "profile_interval",
+      "profileType": "maintenance",
+      "taskType": "maintenance_check",
+      "filters": {
+        "statuses": ["active", "recovering"]
+      },
+      "history": {
+        "eventTypes": ["maintenance_confirmed"],
+        "confirmEventType": "maintenance_confirmed"
+      },
+      "schedule": {
+        "intervalFields": ["cleaningCadenceDays"],
+        "intervalUnit": "days",
+        "requireExplicitInterval": true,
+        "fallbackIntervalDays": [14, 14]
+      },
+      "outputs": {
+        "suggestedAction": "clean_leaves",
+        "defaultConfidence": "high",
+        "noHistoryReason": "No maintenance history — leaf cleaning check recommended."
+      },
+      "notes": "Cleaning reminders for plants with a maintenance cleaning cadence."
+    },
+    {
+      "ruleId": "maintenance_pruning_profiles",
+      "enabled": true,
+      "engine": "profile_month_window",
+      "profileType": "maintenance",
+      "taskType": "pruning_check",
+      "filters": {
+        "statuses": ["active", "recovering"]
+      },
+      "history": {
+        "eventTypes": ["pruning_confirmed"],
+        "confirmEventType": "pruning_confirmed"
+      },
+      "schedule": {
+        "activeMonthsField": "pruningMonths"
+      },
+      "outputs": {
+        "suggestedAction": "prune_if_needed",
+        "defaultConfidence": "medium",
+        "windowUrgency": "medium"
+      },
+      "notes": "Seasonal pruning checks that trigger once per contiguous pruning window."
+    },
+    {
+      "ruleId": "healthcheck_profiles",
+      "enabled": true,
+      "engine": "profile_interval",
+      "profileType": "healthcheck",
+      "taskType": "healthcheck_check",
+      "filters": {
+        "statuses": ["active", "recovering"]
+      },
+      "history": {
+        "eventTypes": ["healthcheck_confirmed"],
+        "confirmEventType": "healthcheck_confirmed"
+      },
+      "schedule": {
+        "intervalFields": ["checkCadenceDays"],
+        "intervalUnit": "days",
+        "requireExplicitInterval": true,
+        "fallbackIntervalDays": [7, 14]
+      },
+      "outputs": {
+        "suggestedAction": "inspect_plant_health",
+        "defaultConfidence": "high",
+        "noHistoryReason": "No health-check history — inspect leaves, stems, and soil."
+      },
+      "notes": "Regular plant health checks based on explicit cadence."
     }
   ]
 }

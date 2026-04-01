@@ -4,7 +4,6 @@ All mutations go through store.write() for atomic writes + schema validation.
 """
 
 import json
-from datetime import datetime, timezone
 
 from . import store
 
@@ -33,6 +32,24 @@ def get_plant(plant_id):
     return None
 
 
+def _compute_irrigation_effective_state(plant):
+    """Derive the denormalized irrigation state from plant and system data."""
+    if plant.get("attachedToIrrigation") and plant.get("irrigationSystemId"):
+        irrigation_system = get_irrigation_system(plant["irrigationSystemId"])
+        if irrigation_system and irrigation_system.get("enabled"):
+            return "active"
+        return "attached_but_system_off"
+    if plant.get("irrigationMode") == "manual":
+        return "manual_only"
+    return "not_attached"
+
+
+def _refresh_irrigation_state(plant):
+    updated = dict(plant)
+    updated["irrigationEffectiveState"] = _compute_irrigation_effective_state(updated)
+    return updated
+
+
 def add_plant(*, name, location_id, sublocation_id=None, species=None,
               scientific_name=None, indoor_outdoor="outdoor",
               irrigation_mode="manual", irrigation_system_id=None,
@@ -49,19 +66,6 @@ def add_plant(*, name, location_id, sublocation_id=None, species=None,
     numeric_id = data["nextPlantNumericId"]
     plant_id = f"plant_{numeric_id:03d}"
 
-    # Determine effective irrigation state
-    effective_state = None
-    if attached_to_irrigation and irrigation_system_id:
-        irr = get_irrigation_system(irrigation_system_id)
-        if irr and irr.get("enabled"):
-            effective_state = "active"
-        else:
-            effective_state = "attached_but_system_off"
-    elif irrigation_mode == "manual":
-        effective_state = "manual_only"
-    else:
-        effective_state = "not_attached"
-
     plant = {
         "plantId": plant_id,
         "displayName": name,
@@ -75,7 +79,7 @@ def add_plant(*, name, location_id, sublocation_id=None, species=None,
         "irrigationMode": irrigation_mode,
         "irrigationSystemId": irrigation_system_id,
         "attachedToIrrigation": attached_to_irrigation,
-        "irrigationEffectiveState": effective_state,
+        "irrigationEffectiveState": None,
         "wateringProfileId": None,
         "notes": notes,
         "riskFlags": [],
@@ -89,6 +93,8 @@ def add_plant(*, name, location_id, sublocation_id=None, species=None,
     for k, v in extra.items():
         if k not in plant:
             plant[k] = v
+
+    plant = _refresh_irrigation_state(plant)
 
     data["plants"].append(plant)
     data["nextPlantNumericId"] = numeric_id + 1
@@ -110,7 +116,8 @@ def update_plant(plant_id, updates):
             if "irrigationSystemId" in updates and updates["irrigationSystemId"]:
                 _require_irrigation_system(updates["irrigationSystemId"])
 
-            data["plants"][i] = {**p, **updates}
+            merged = {**p, **updates}
+            data["plants"][i] = _refresh_irrigation_state(merged)
             store.write("plants.json", data)
             return data["plants"][i]
     raise ValueError(f"Plant not found: {plant_id}")
@@ -270,8 +277,25 @@ def update_irrigation_system(system_id, updates):
         if s["irrigationSystemId"] == system_id:
             data["irrigationSystems"][i] = {**s, **updates}
             store.write("irrigation_systems.json", data)
+            _recompute_plants_for_irrigation_system(system_id)
             return data["irrigationSystems"][i]
     raise ValueError(f"Irrigation system not found: {system_id}")
+
+
+def _recompute_plants_for_irrigation_system(system_id):
+    """Refresh denormalized irrigation state for plants attached to a system."""
+    plants_data = store.read("plants.json")
+    changed = False
+    for index, plant in enumerate(plants_data["plants"]):
+        if plant.get("irrigationSystemId") != system_id:
+            continue
+        refreshed = _refresh_irrigation_state(plant)
+        if refreshed.get("irrigationEffectiveState") != plant.get("irrigationEffectiveState"):
+            plants_data["plants"][index] = refreshed
+            changed = True
+
+    if changed:
+        store.write("plants.json", plants_data)
 
 
 # ---------------------------------------------------------------------------

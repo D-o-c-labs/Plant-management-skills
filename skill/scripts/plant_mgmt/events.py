@@ -16,6 +16,27 @@ def _generate_event_id():
     return f"evt_{uuid.uuid4()}"
 
 
+def _sync_repotting_profile(event):
+    """Keep repotting profile anchors aligned with confirmation history."""
+    if event.get("type") != "repotting_confirmed":
+        return
+
+    from . import profiles
+
+    effective_date = event.get("effectiveDateLocal")
+    for plant_id in event.get("plantIds", []):
+        plant = registry.get_plant(plant_id)
+        if not plant:
+            continue
+        profile_ref = plant.get("repottingProfileId") or plant_id
+        profile = profiles.get_profile("repotting", profile_ref)
+        if not profile:
+            continue
+        updated_profile = dict(profile)
+        updated_profile["lastRepottedAt"] = effective_date
+        profiles.set_profile("repotting", plant_id, updated_profile)
+
+
 def log_event(*, event_type, source="system", plant_id=None, plant_ids=None,
               location_id=None, scope=None, effective_date=None,
               effective_precision="day", effective_part_of_day=None,
@@ -68,6 +89,7 @@ def log_event(*, event_type, source="system", plant_id=None, plant_ids=None,
     data = store.read("events.json")
     data["events"].append(event)
     store.write("events.json", data)
+    _sync_repotting_profile(event)
     return event
 
 

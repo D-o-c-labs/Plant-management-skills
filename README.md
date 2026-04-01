@@ -19,17 +19,22 @@ Core responsibilities:
 ## Repository Layout
 
 ```text
-plant-management/
-├── SKILL.md                 Agent-facing instructions
+plant-management-skills/
+├── AGENTS.md                Contributor-facing repository contract
 ├── README.md                Human-facing setup and usage guide
-├── schemas/                 JSON Schema definitions
-├── seeds/                   Seed JSON files for new installations
-└── scripts/
-    ├── plant_mgmt_cli.py    Single CLI entry point
-    ├── requirements.txt     Python dependencies
-    ├── plant_mgmt/          Python package
-    └── tests/               Unit tests
+├── _meta.json               Skill package metadata
+└── skill/                   Packaged skill root
+    ├── SKILL.md             Agent-facing runtime instructions
+    ├── schemas/             JSON Schema definitions
+    ├── seeds/               Seed JSON files for new installations
+    └── scripts/
+        ├── plant_mgmt_cli.py    Single CLI entry point
+        ├── requirements.txt     Python dependencies
+        ├── plant_mgmt/          Python package
+        └── tests/               Unit tests
 ```
+
+The rest of this README describes the packaged skill layout inside `skill/`. If you are working directly from this repository root, prefix repo-local paths with `skill/`.
 
 ## Requirements
 
@@ -206,7 +211,7 @@ The event logger now validates plant and location references before writing.
 
 ### Reminders
 
-Use `reminders confirm` when the user is confirming an existing reminder task. This command logs the canonical care event automatically.
+Use `reminders confirm` when the user is confirming an existing reminder task. This command logs the canonical care event from task metadata, so custom recurring programs work without Python changes.
 
 ```bash
 python3 scripts/plant_mgmt_cli.py reminders list [--status open|done|expired|cancelled]
@@ -216,11 +221,10 @@ python3 scripts/plant_mgmt_cli.py reminders cancel <taskId> [--reason "Heavy rai
 python3 scripts/plant_mgmt_cli.py reminders reset
 ```
 
-Canonical reminder confirmation mappings:
+Reminder task IDs are rule-scoped and may also include a program ID:
 
-- `watering_check` -> `watering_confirmed`
-- `fertilization_check` -> `fertilization_confirmed`
-- `neem` -> `neem_confirmed`
+- `watering_check:watering_profiles:plant_001`
+- `neem_treatment:pest_recurring_programs:plant_001:neem_cycle`
 
 ### Evaluation
 
@@ -243,7 +247,8 @@ Seed behavior:
 
 - Generic watering checks are enabled by default
 - Generic fertilization checks are enabled by default
-- Neem is shipped as a disabled example rule until you scope it to a real location/risk pattern
+- Generic pest recurring-program evaluation is enabled by default
+- Neem is now modeled as a recurring program inside `pest_profiles.json`, not as a special evaluator rule
 
 ### Lookup
 
@@ -317,7 +322,7 @@ If this repo is copied into a skill directory:
 If the user says they completed a reminder:
 
 ```bash
-python3 scripts/plant_mgmt_cli.py reminders confirm watering_check:plant_001 --details "Watered thoroughly"
+python3 scripts/plant_mgmt_cli.py reminders confirm watering_check:watering_profiles:plant_001 --details "Watered thoroughly"
 ```
 
 If the user reports care that was not tied to an open reminder:

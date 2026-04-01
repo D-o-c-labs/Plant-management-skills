@@ -2,25 +2,111 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "pest_profiles.schema.json",
   "title": "Pest Profiles",
-  "description": "Pest vulnerability and treatment profiles per plant.",
+  "description": "Pest vulnerability, prevention, and recurring treatment programs per plant.",
   "type": "object",
   "required": ["version", "profiles"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "profiles": {
       "type": "array",
-      "items": { "$ref": "#/$defs/profile" }
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
     }
   },
   "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "monthArray": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 12
+      }
+    },
+    "dayInterval": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "programFilters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiredRiskFlagsAny": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "requiredRiskFlagsAll": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "excludedRiskFlagsAny": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "recurringProgram": {
+      "type": "object",
+      "required": ["programId", "displayName", "taskType", "confirmEventType", "cadenceDays"],
+      "additionalProperties": false,
+      "properties": {
+        "programId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "taskType": {
+          "type": "string"
+        },
+        "confirmEventType": {
+          "type": "string"
+        },
+        "eventTypes": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "suggestedAction": {
+          "type": ["string", "null"]
+        },
+        "cadenceDays": {
+          "$ref": "#/$defs/dayInterval"
+        },
+        "intervalDays": {
+          "$ref": "#/$defs/dayInterval"
+        },
+        "activeMonths": {
+          "$ref": "#/$defs/monthArray"
+        },
+        "disabledMonths": {
+          "$ref": "#/$defs/monthArray"
+        },
+        "reducedMonths": {
+          "$ref": "#/$defs/monthArray"
+        },
+        "filters": {
+          "$ref": "#/$defs/programFilters"
+        },
+        "notes": {
+          "type": ["string", "null"]
+        }
+      }
+    },
     "profile": {
       "type": "object",
       "required": ["plantId", "displayName"],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "plantId": {
           "type": "string"
@@ -33,21 +119,19 @@
           "type": "string"
         },
         "knownVulnerabilities": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Known pest/disease vulnerabilities."
+          "$ref": "#/$defs/stringArray"
         },
         "preventiveTreatments": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Recommended preventive treatments."
+          "$ref": "#/$defs/stringArray"
         },
         "checkFrequencyDays": {
-          "type": ["array", "null"],
-          "items": { "type": "integer", "minimum": 1 },
-          "minItems": 2,
-          "maxItems": 2,
-          "description": "[min, max] days between pest checks."
+          "$ref": "#/$defs/dayInterval"
+        },
+        "recurringPrograms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/recurringProgram"
+          }
         },
         "notes": {
           "type": ["string", "null"]

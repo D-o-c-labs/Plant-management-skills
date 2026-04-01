@@ -1,6 +1,6 @@
 {
   "name": "plant-management",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Track and care for household plants — registry, profiles, evaluation engine, reminders, and species lookups.",
   "author": "Doc",
   "license": "MIT",
