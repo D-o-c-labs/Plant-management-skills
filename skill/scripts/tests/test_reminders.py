@@ -1,9 +1,9 @@
 import unittest
 
-from skills.scripts.plant_mgmt import registry
-from skills.scripts.tests.test_support import plant_test_env
+from test_support import plant_test_env
 
-from skills.scripts.plant_mgmt import reminders
+from plant_mgmt import registry
+from plant_mgmt import reminders
 
 
 class RemindersTest(unittest.TestCase):
@@ -31,4 +31,3 @@ class RemindersTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

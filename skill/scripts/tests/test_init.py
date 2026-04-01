@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from skills.scripts.tests.test_support import plant_test_env
+from test_support import plant_test_env
 
-from skills.scripts.plant_mgmt import init
+from plant_mgmt import init
 
 
 class InitTest(unittest.TestCase):

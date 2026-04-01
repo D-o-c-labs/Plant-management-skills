@@ -1,9 +1,9 @@
 import unittest
 
-from skills.scripts.plant_mgmt import eval_engine, events, profiles, registry
-from skills.scripts.tests.test_support import plant_test_env
+from test_support import plant_test_env
 
-from skills.scripts.plant_mgmt import reminders
+from plant_mgmt import eval_engine, events, profiles, registry
+from plant_mgmt import reminders
 
 
 class EvalEngineTest(unittest.TestCase):
@@ -46,4 +46,3 @@ class EvalEngineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

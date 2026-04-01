@@ -1,9 +1,9 @@
 import unittest
 
-from skills.scripts.plant_mgmt import profiles
-from skills.scripts.tests.test_support import plant_test_env, read_json
+from test_support import plant_test_env, read_json
 
-from skills.scripts.plant_mgmt import registry
+from plant_mgmt import profiles
+from plant_mgmt import registry
 
 
 class ProfilesTest(unittest.TestCase):
@@ -52,4 +52,3 @@ class ProfilesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

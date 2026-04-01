@@ -15,13 +15,11 @@ import json
 import sys
 import os
 
-from skills.scripts.plant_mgmt import config, init as init_mod, schemas
-
 # Ensure the scripts directory is on the path so plant_mgmt is importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from skills.scripts.plant_mgmt import store
+    from plant_mgmt import config, init as init_mod, schemas, store
 except ModuleNotFoundError as exc:
     if exc.name in {"jsonschema", "requests"}:
         print(
@@ -209,55 +207,55 @@ def cmd_migrate(args):
 # ---------------------------------------------------------------------------
 def cmd_plants(args):
     """Plant registry operations."""
-    from skills.scripts.plant_mgmt import registry
+    from plant_mgmt import registry
     registry.cli_plants(args)
 
 
 def cmd_locations(args):
     """Location operations."""
-    from skills.scripts.plant_mgmt import registry
+    from plant_mgmt import registry
     registry.cli_locations(args)
 
 
 def cmd_microzones(args):
     """Microzone operations."""
-    from skills.scripts.plant_mgmt import registry
+    from plant_mgmt import registry
     registry.cli_microzones(args)
 
 
 def cmd_irrigation(args):
     """Irrigation system operations."""
-    from skills.scripts.plant_mgmt import registry
+    from plant_mgmt import registry
     registry.cli_irrigation(args)
 
 
 def cmd_profiles(args):
     """Profile operations."""
-    from skills.scripts.plant_mgmt import profiles
+    from plant_mgmt import profiles
     profiles.cli_profiles(args)
 
 
 def cmd_events(args):
     """Event operations."""
-    from skills.scripts.plant_mgmt import events
+    from plant_mgmt import events
     events.cli_events(args)
 
 
 def cmd_reminders(args):
     """Reminder operations."""
-    from skills.scripts.plant_mgmt import reminders
+    from plant_mgmt import reminders
     reminders.cli_reminders(args)
 
 
 def cmd_eval(args):
     """Run care evaluation."""
-    from skills.scripts.plant_mgmt import eval_engine
+    from plant_mgmt import eval_engine
     eval_engine.cli_eval(args)
 
 
 def cmd_lookup(args):
     """External API lookups."""
-    from skills.scripts.plant_mgmt import lookup
+    from plant_mgmt import lookup
     lookup.cli_lookup(args)
 
 
