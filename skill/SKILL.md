@@ -118,6 +118,8 @@ Use `events log` when the user reports an action and there is no reminder task t
 
 ```bash
 python3 scripts/plant_mgmt_cli.py events log --type watering_confirmed --plant plant_001 --scope "manual watering" [--details '{"method":"watering_can"}']
+python3 scripts/plant_mgmt_cli.py events log --type neem_confirmed --plant plant_001 --effective-date 2026-03-18 --effective-precision part_of_day --effective-part-of-day morning
+python3 scripts/plant_mgmt_cli.py events log --type watering_confirmed --plant plant_001 --effective-datetime 2026-03-18T07:30:00 --effective-precision exact
 python3 scripts/plant_mgmt_cli.py events list [--plant plant_001] [--type watering_confirmed] [--since 2026-03-01] [--limit 20]
 python3 scripts/plant_mgmt_cli.py events last plant_001 [--type watering_confirmed]
 ```
@@ -140,8 +142,10 @@ Use `reminders confirm` when the user is confirming an existing reminder task. T
 python3 scripts/plant_mgmt_cli.py reminders list [--status open|done|expired|cancelled]
 python3 scripts/plant_mgmt_cli.py reminders get <taskId>
 python3 scripts/plant_mgmt_cli.py reminders confirm <taskId> [--details "Watered thoroughly"]
+python3 scripts/plant_mgmt_cli.py reminders confirm <taskId> --details "Neem applied this morning" --effective-date 2026-03-18 --effective-precision part_of_day --effective-part-of-day morning
 python3 scripts/plant_mgmt_cli.py reminders cancel <taskId> [--reason "Heavy rain made this irrelevant"]
 python3 scripts/plant_mgmt_cli.py reminders reset
+python3 scripts/plant_mgmt_cli.py reminders repair
 ```
 
 Reminder task IDs are rule-scoped and may also include a program ID:

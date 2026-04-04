@@ -3,13 +3,13 @@
 import json
 from datetime import datetime, timezone
 
+from . import schemas
 from . import store
 from . import events as events_mod
 
 TASK_CONFIRM_EVENT_TYPES = {
     "watering_check": "watering_confirmed",
     "fertilization_check": "fertilization_confirmed",
-    "neem": "neem_confirmed",
     "repotting_check": "repotting_confirmed",
     "healthcheck_check": "healthcheck_confirmed",
     "maintenance_check": "maintenance_confirmed",
@@ -19,6 +19,136 @@ TASK_CONFIRM_EVENT_TYPES = {
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _target_state_version():
+    schema = schemas.get_schema_for_file("reminder_state.json") or {}
+    return (
+        schema.get("properties", {})
+        .get("version", {})
+        .get("const", 2)
+    )
+
+
+def _find_neem_program(plant_id):
+    """Return the unique neem recurring program for a plant, if one exists."""
+    from . import profiles
+
+    profile = profiles.get_profile("pest", plant_id)
+    if not profile:
+        return None
+
+    matches = [
+        program
+        for program in profile.get("recurringPrograms", [])
+        if program.get("confirmEventType") == "neem_confirmed"
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    return None
+
+
+def normalize_state_payload(data):
+    """Normalize reminder state payloads before validation/write."""
+    if not isinstance(data, dict):
+        raise ValueError("reminder_state.json root must be a JSON object")
+
+    changed = False
+    repairs = []
+    warnings = []
+    normalized = dict(data)
+
+    target_version = _target_state_version()
+    if normalized.get("version") != target_version:
+        normalized["version"] = target_version
+        changed = True
+        repairs.append(f"set version to {target_version}")
+
+    tasks = normalized.get("tasks")
+    if not isinstance(tasks, dict):
+        normalized["tasks"] = {}
+        tasks = normalized["tasks"]
+        changed = True
+        repairs.append("reset tasks to an empty object")
+
+    meta = normalized.get("meta")
+    if not isinstance(meta, dict):
+        normalized["meta"] = {}
+        changed = True
+        repairs.append("reset meta to an empty object")
+
+    normalized_tasks = {}
+    for original_key, raw_task in tasks.items():
+        if not isinstance(raw_task, dict):
+            changed = True
+            warnings.append(f"dropped non-object task entry at key {original_key}")
+            continue
+
+        task = dict(raw_task)
+        task.setdefault("taskId", original_key)
+        task_id = task["taskId"]
+        target_key = task_id
+
+        if task.get("type") == "neem":
+            changed = True
+            program = _find_neem_program(task.get("plantId"))
+            if program:
+                target_key = (
+                    f"{program.get('taskType') or 'pest_program'}:"
+                    f"pest_recurring_programs:{task.get('plantId')}:{program.get('programId')}"
+                )
+                task["taskId"] = target_key
+                task["type"] = program.get("taskType") or "pest_program"
+                task["managedByRuleId"] = "pest_recurring_programs"
+                task["programId"] = program.get("programId")
+                task["confirmEventType"] = program.get("confirmEventType") or "neem_confirmed"
+                repairs.append(f"converted legacy neem task {original_key} to {target_key}")
+            elif task.get("status") == "open":
+                task["status"] = "expired"
+                task["lastEvaluationAt"] = _now_iso()
+                task["lastReason"] = (
+                    "Expired during repair: standalone neem tasks are no longer supported. "
+                    "Re-run eval to regenerate pest recurring-program tasks."
+                )
+                repairs.append(f"expired unsupported legacy neem task {original_key}")
+            else:
+                warnings.append(
+                    f"left historical standalone neem task {original_key} unchanged because no unique pest program matched"
+                )
+
+        if target_key in normalized_tasks and target_key != original_key:
+            repairs.append(
+                f"dropped superseded legacy task {original_key} because {target_key} already exists"
+            )
+            changed = True
+            continue
+
+        if target_key != original_key:
+            changed = True
+        normalized_tasks[target_key] = task
+
+    if normalized_tasks != tasks:
+        normalized["tasks"] = normalized_tasks
+        changed = True
+
+    return normalized, changed, repairs, warnings
+
+
+def repair_state():
+    """Repair reminder_state.json in place when recoverable."""
+    raw_data = store.read("reminder_state.json", validate=False)
+    normalized, changed, repairs, warnings = normalize_state_payload(raw_data)
+
+    if changed:
+        store.write("reminder_state.json", normalized)
+
+    return {
+        "changed": changed,
+        "repairsApplied": repairs,
+        "warnings": warnings,
+        "versionBefore": raw_data.get("version") if isinstance(raw_data, dict) else None,
+        "versionAfter": normalized.get("version"),
+    }
 
 
 def list_tasks(*, status=None):
@@ -100,7 +230,15 @@ def mark_reminded(task_id):
     return task
 
 
-def confirm_task(task_id, *, details=None):
+def confirm_task(
+    task_id,
+    *,
+    details=None,
+    effective_date=None,
+    effective_datetime=None,
+    effective_precision="day",
+    effective_part_of_day=None,
+):
     """Confirm/close a reminder task and log a confirmation event.
 
     Returns (task, event) tuple.
@@ -111,6 +249,10 @@ def confirm_task(task_id, *, details=None):
         raise ValueError(f"Task not found: {task_id}")
     if task["status"] != "open":
         raise ValueError(f"Only open tasks can be confirmed: {task_id}")
+    if task.get("type") == "neem" and not task.get("confirmEventType"):
+        raise ValueError(
+            "Standalone neem reminder tasks are no longer supported. Run `reminders repair` first."
+        )
 
     # Log confirmation event
     event_type = (
@@ -123,6 +265,10 @@ def confirm_task(task_id, *, details=None):
         plant_id=task.get("plantId"),
         location_id=task.get("locationId"),
         scope=f"task:{task_id}",
+        effective_date=effective_date,
+        effective_datetime=effective_datetime,
+        effective_precision=effective_precision,
+        effective_part_of_day=effective_part_of_day,
         details={"taskId": task_id, "userDetails": details},
     )
 
@@ -230,6 +376,10 @@ def cli_reminders(args):
         task, event = confirm_task(
             args.taskId,
             details=getattr(args, "details", None),
+            effective_date=getattr(args, "effective_date", None),
+            effective_datetime=getattr(args, "effective_datetime", None),
+            effective_precision=getattr(args, "effective_precision", "day"),
+            effective_part_of_day=getattr(args, "effective_part_of_day", None),
         )
         if as_json:
             print(json.dumps({"task": task, "event": event}, indent=2, ensure_ascii=False))
@@ -247,5 +397,21 @@ def cli_reminders(args):
         count = reset_stale_tasks()
         print(f"Cleaned up {count} stale task(s).")
 
+    elif subcmd == "repair":
+        result = repair_state()
+        if as_json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            status = "changed" if result["changed"] else "no changes"
+            print(f"Reminder state repair: {status}")
+            if result["repairsApplied"]:
+                print("Repairs applied:")
+                for item in result["repairsApplied"]:
+                    print(f"  - {item}")
+            if result["warnings"]:
+                print("Warnings:")
+                for item in result["warnings"]:
+                    print(f"  - {item}")
+
     else:
-        print("Usage: plant_mgmt reminders {list|get|confirm|cancel|reset}")
+        print("Usage: plant_mgmt reminders {list|get|confirm|cancel|reset|repair}")

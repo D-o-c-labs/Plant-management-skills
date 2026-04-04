@@ -57,17 +57,17 @@ python3 -m pip install -r scripts/requirements.txt
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `PLANT_DATA_DIR` | Yes | Directory containing the runtime JSON data files |
-| `PLANT_SKILL_DIR` | No | Skill root override. Defaults to auto-detection from `scripts/` |
-| `PLANT_TIMEZONE` | No | IANA timezone override for evaluation |
-| `PLANT_LOCALE` | No | Locale hint for host-side messaging |
-| `TREFLE_API_KEY` | No | Trefle API key |
-| `PERENUAL_API_KEY` | No | Perenual API key |
-| `OPENPLANTBOOK_CLIENT_ID` | No | OpenPlantbook client ID |
-| `OPENPLANTBOOK_CLIENT_SECRET` | No | OpenPlantbook client secret |
-| `TAVILY_API_KEY` | No | Tavily API key |
+| Variable                      | Required | Description                                                     |
+| ----------------------------- | -------- | --------------------------------------------------------------- |
+| `PLANT_DATA_DIR`              | Yes      | Directory containing the runtime JSON data files                |
+| `PLANT_SKILL_DIR`             | No       | Skill root override. Defaults to auto-detection from `scripts/` |
+| `PLANT_TIMEZONE`              | No       | IANA timezone override for evaluation                           |
+| `PLANT_LOCALE`                | No       | Locale hint for host-side messaging                             |
+| `TREFLE_API_KEY`              | No       | Trefle API key                                                  |
+| `PERENUAL_API_KEY`            | No       | Perenual API key                                                |
+| `OPENPLANTBOOK_CLIENT_ID`     | No       | OpenPlantbook client ID                                         |
+| `OPENPLANTBOOK_CLIENT_SECRET` | No       | OpenPlantbook client secret                                     |
+| `TAVILY_API_KEY`              | No       | Tavily API key                                                  |
 
 ## Quick Start
 
@@ -203,11 +203,13 @@ Use `events log` when the user performed care but there is no reminder task to c
 
 ```bash
 python3 scripts/plant_mgmt_cli.py events log --type watering_confirmed --plant plant_001 --scope "manual watering"
+python3 scripts/plant_mgmt_cli.py events log --type neem_confirmed --plant plant_001 --effective-date 2026-03-18 --effective-precision part_of_day --effective-part-of-day morning
+python3 scripts/plant_mgmt_cli.py events log --type watering_confirmed --plant plant_001 --effective-datetime 2026-03-18T07:30:00 --effective-precision exact
 python3 scripts/plant_mgmt_cli.py events list [--plant plant_001] [--type watering_confirmed] [--since 2026-03-01] [--limit 20]
 python3 scripts/plant_mgmt_cli.py events last plant_001 [--type watering_confirmed]
 ```
 
-The event logger now validates plant and location references before writing.
+The event logger now validates plant and location references before writing. Use `--effective-date`, `--effective-datetime`, `--effective-precision`, and `--effective-part-of-day` when the action happened earlier than the recording time.
 
 ### Reminders
 
@@ -217,8 +219,10 @@ Use `reminders confirm` when the user is confirming an existing reminder task. T
 python3 scripts/plant_mgmt_cli.py reminders list [--status open|done|expired|cancelled]
 python3 scripts/plant_mgmt_cli.py reminders get <taskId>
 python3 scripts/plant_mgmt_cli.py reminders confirm <taskId> [--details "Watered thoroughly"]
+python3 scripts/plant_mgmt_cli.py reminders confirm <taskId> --details "Neem applied this morning" --effective-date 2026-03-18 --effective-precision part_of_day --effective-part-of-day morning
 python3 scripts/plant_mgmt_cli.py reminders cancel <taskId> [--reason "Heavy rain made this irrelevant"]
 python3 scripts/plant_mgmt_cli.py reminders reset
+python3 scripts/plant_mgmt_cli.py reminders repair
 ```
 
 Reminder task IDs are rule-scoped and may also include a program ID:

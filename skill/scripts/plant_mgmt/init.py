@@ -97,6 +97,7 @@ def migrate_from_existing(source_dir: str) -> dict:
         "validation_warnings": [],
         "errors": [],
     }
+    pending_reminder_state = None
 
     for filename in REQUIRED_FILES:
         source_file = source / filename
@@ -124,6 +125,10 @@ def migrate_from_existing(source_dir: str) -> dict:
                     "warnings": warnings,
                 })
 
+            if filename == "reminder_state.json":
+                pending_reminder_state = data
+                continue
+
             # Copy the file
             shutil.copy2(source_file, dest)
             result["imported"].append(filename)
@@ -144,6 +149,25 @@ def migrate_from_existing(source_dir: str) -> dict:
             except Exception as e:
                 result["errors"].append(f"intake/{intake_file.name}: {e}")
         result["imported"].append("intake/")
+
+    if pending_reminder_state is not None:
+        try:
+            from . import reminders
+
+            normalized, changed, repairs, warnings = reminders.normalize_state_payload(
+                pending_reminder_state
+            )
+            store.write("reminder_state.json", normalized)
+            result["imported"].append("reminder_state.json")
+            if changed or warnings:
+                result["validation_warnings"].append(
+                    {
+                        "file": "reminder_state.json",
+                        "warnings": repairs + warnings,
+                    }
+                )
+        except Exception as e:
+            result["errors"].append(f"reminder_state.json: {e}")
 
     validation = check_data_dir()
     for filename, errors in validation["validation"].items():

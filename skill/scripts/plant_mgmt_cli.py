@@ -259,6 +259,23 @@ def cmd_lookup(args):
     lookup.cli_lookup(args)
 
 
+def _add_effective_time_arguments(parser):
+    """Add effective-time flags shared by event logging and reminder confirmations."""
+    parser.add_argument("--effective-date", help="Effective local date (YYYY-MM-DD)")
+    parser.add_argument("--effective-datetime", help="Effective local datetime (ISO 8601)")
+    parser.add_argument(
+        "--effective-precision",
+        choices=["day", "part_of_day", "hour", "exact"],
+        default="day",
+        help="Precision of the effective event time",
+    )
+    parser.add_argument(
+        "--effective-part-of-day",
+        choices=["morning", "afternoon", "evening", "night"],
+        help="Part of day when precision is part_of_day",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -393,6 +410,7 @@ def build_parser():
     p_evt_log.add_argument("--location", help="Location ID")
     p_evt_log.add_argument("--scope", help="Scope description")
     p_evt_log.add_argument("--details", help="JSON details object")
+    _add_effective_time_arguments(p_evt_log)
     p_evt_list = evt_sub.add_parser("list", help="List events")
     p_evt_list.add_argument("--plant", help="Filter by plant ID")
     p_evt_list.add_argument("--type", help="Filter by event type")
@@ -413,10 +431,12 @@ def build_parser():
     p_rem_confirm = rem_sub.add_parser("confirm", help="Confirm a reminder task")
     p_rem_confirm.add_argument("taskId", help="Task ID")
     p_rem_confirm.add_argument("--details", help="Confirmation details")
+    _add_effective_time_arguments(p_rem_confirm)
     p_rem_cancel = rem_sub.add_parser("cancel", help="Cancel a reminder task")
     p_rem_cancel.add_argument("taskId", help="Task ID")
     p_rem_cancel.add_argument("--reason", help="Cancellation reason")
     rem_sub.add_parser("reset", help="Clean up expired/stale tasks")
+    rem_sub.add_parser("repair", help="Normalize and repair reminder state")
     p_rem.set_defaults(func=cmd_reminders)
 
     # eval

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from test_support import plant_test_env
+from test_support import plant_test_env, read_json, write_json
 
 from plant_mgmt import eval_engine, events, profiles, registry, reminders
 
@@ -264,6 +264,91 @@ class EvalEngineTest(unittest.TestCase):
 
             self.assertEqual(result["openTasks"], 0)
             self.assertEqual(result["openTaskState"], [])
+
+    @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
+    def test_eval_uses_effective_date_over_recorded_timestamp_for_recency(self, _mock_context):
+        with plant_test_env() as data_dir:
+            registry.add_location(location_id="study", name="Study", loc_type="room")
+            plant = registry.add_plant(name="Basil", location_id="study")
+            profiles.set_profile(
+                "watering",
+                plant["plantId"],
+                {
+                    "profileId": "watering:basil",
+                    "baselineSource": "basil baseline",
+                    "seasonalBaseline": {
+                        "winter": {"level": "very_low", "baseIntervalDays": [14, 21]},
+                        "spring": {"level": "medium", "baseIntervalDays": [6, 10]},
+                        "summer": {"level": "high", "baseIntervalDays": [2, 4]},
+                        "autumn": {"level": "low", "baseIntervalDays": [7, 10]},
+                    },
+                },
+            )
+            event = events.log_event(
+                event_type="watering_confirmed",
+                plant_id=plant["plantId"],
+                location_id="study",
+                effective_date="2026-03-30",
+            )
+
+            events_data = read_json(data_dir / "events.json")
+            events_data["events"][0]["timestamp"] = "2026-03-01T09:00:00+00:00"
+            write_json(data_dir / "events.json", events_data)
+
+            result = eval_engine.evaluate(dry_run=True)
+
+            self.assertEqual(result["summary"]["totalActions"], 0)
+            self.assertIn(
+                "Within baseline interval",
+                result["noAction"][0]["reason"],
+            )
+
+    @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
+    def test_eval_prefers_newer_effective_date_over_later_backfilled_timestamp(self, _mock_context):
+        with plant_test_env() as data_dir:
+            registry.add_location(location_id="den", name="Den", loc_type="room")
+            plant = registry.add_plant(name="Rosemary", location_id="den")
+            profiles.set_profile(
+                "watering",
+                plant["plantId"],
+                {
+                    "profileId": "watering:rosemary",
+                    "baselineSource": "rosemary baseline",
+                    "seasonalBaseline": {
+                        "winter": {"level": "very_low", "baseIntervalDays": [14, 21]},
+                        "spring": {"level": "low", "baseIntervalDays": [6, 10]},
+                        "summer": {"level": "medium", "baseIntervalDays": [4, 7]},
+                        "autumn": {"level": "low", "baseIntervalDays": [7, 10]},
+                    },
+                },
+            )
+            events.log_event(
+                event_type="watering_confirmed",
+                plant_id=plant["plantId"],
+                location_id="den",
+                effective_date="2026-03-30",
+            )
+            events.log_event(
+                event_type="watering_confirmed",
+                plant_id=plant["plantId"],
+                location_id="den",
+                effective_date="2026-03-01",
+            )
+
+            events_data = read_json(data_dir / "events.json")
+            events_data["events"][0]["timestamp"] = "2026-03-10T09:00:00+00:00"
+            events_data["events"][1]["timestamp"] = "2026-03-31T09:00:00+00:00"
+            write_json(data_dir / "events.json", events_data)
+
+            latest_event = events.get_last_event(
+                plant["plantId"],
+                event_type="watering_confirmed",
+                tz_name="UTC",
+            )
+            result = eval_engine.evaluate(dry_run=True)
+
+            self.assertEqual(latest_event["effectiveDateLocal"], "2026-03-30")
+            self.assertEqual(result["summary"]["totalActions"], 0)
 
 
 if __name__ == "__main__":
