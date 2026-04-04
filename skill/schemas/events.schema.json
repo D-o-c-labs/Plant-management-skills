@@ -32,7 +32,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Event type: watering_confirmed, neem_confirmed, fertilization_confirmed, rain_confirmed, photo_received, observation, plant_added, plant_archived, etc."
+          "description": "Event type: watering_confirmed, neem_confirmed, fertilization_confirmed, rain_confirmed, soap_confirmed, photo_received, observation, plant_added, plant_archived, etc."
         },
         "source": {
           "type": "string",
@@ -41,6 +41,10 @@
         "effectiveDateLocal": {
           "type": ["string", "null"],
           "description": "Local date (YYYY-MM-DD) when the event actually happened (may differ from recording timestamp)."
+        },
+        "effectiveDateTimeLocal": {
+          "type": ["string", "null"],
+          "description": "Local datetime (ISO 8601) when the event actually happened, used for hour/exact precision."
         },
         "effectivePrecision": {
           "type": "string",

@@ -34,7 +34,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Task type, e.g. 'watering_check', 'neem', 'fertilization_check'."
+          "description": "Task type, e.g. 'watering_check', 'neem_treatment', 'fertilization_check'."
         },
         "status": {
           "type": "string",

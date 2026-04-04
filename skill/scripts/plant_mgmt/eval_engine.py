@@ -31,7 +31,7 @@ SEASON_MAP = {
 }
 
 DEFAULT_ACTIVE_STATUSES = ["active", "recovering"]
-LEGACY_MANAGED_TASK_TYPES = {"watering_check", "neem", "fertilization_check"}
+LEGACY_MANAGED_TASK_TYPES = {"watering_check", "fertilization_check"}
 
 
 def get_season(month: int) -> str:
@@ -103,19 +103,11 @@ def _parse_anchor_value(value, tz_name):
 
 def _event_anchor_datetime(event, tz_name):
     """Resolve the scheduling anchor for an event."""
-    return _parse_anchor_value(event.get("effectiveDateLocal"), tz_name) or _parse_iso(
-        event.get("timestamp")
-    )
+    return events.get_event_anchor_datetime(event, tz_name=tz_name)
 
 
 def _event_sort_key(event, tz_name):
-    anchor_dt = _event_anchor_datetime(event, tz_name) or datetime.min.replace(tzinfo=timezone.utc)
-    timestamp = _parse_iso(event.get("timestamp")) or anchor_dt
-    if anchor_dt.tzinfo is None:
-        anchor_dt = anchor_dt.replace(tzinfo=timezone.utc)
-    if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
-    return anchor_dt.astimezone(timezone.utc), timestamp.astimezone(timezone.utc)
+    return events.get_event_sort_key(event, tz_name=tz_name)
 
 
 def _days_since(anchor_dt, reference_dt):
