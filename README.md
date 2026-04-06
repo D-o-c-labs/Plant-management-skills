@@ -235,6 +235,8 @@ Reminder task IDs are rule-scoped and may also include a program ID:
 ```bash
 python3 scripts/plant_mgmt_cli.py --json eval run [--weather '{"tempC":32,"humidity":35,"condition":"sunny"}'] [--dry-run]
 python3 scripts/plant_mgmt_cli.py --json eval status
+python3 scripts/plant_mgmt_cli.py --json eval run | python3 scripts/plant_mgmt_cli.py eval render
+python3 scripts/plant_mgmt_cli.py --json eval run | python3 scripts/plant_mgmt_cli.py --json eval render
 ```
 
 `eval run` returns:
@@ -246,6 +248,7 @@ python3 scripts/plant_mgmt_cli.py --json eval status
 - `summary`: aggregate counts
 
 The evaluator now closes open reminder tasks that are no longer due.
+`eval render` converts the `actions` array into a localized reminder message using `PLANT_LOCALE` / `config.locale` (supported: `en`, `it`; unsupported locales fall back to English). Without `--json` it prints raw text, and with `--json` it returns `{"message": ...}`.
 
 Seed behavior:
 

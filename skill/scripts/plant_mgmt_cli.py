@@ -249,7 +249,29 @@ def cmd_reminders(args):
 
 def cmd_eval(args):
     """Run care evaluation."""
-    from plant_mgmt import eval_engine
+    from plant_mgmt import eval_engine, render
+
+    if args.subcmd == "render":
+        payload_raw = sys.stdin.read()
+        try:
+            payload = json.loads(payload_raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError("eval render expects JSON on stdin with an 'actions' array.") from exc
+
+        if not isinstance(payload, dict) or "actions" not in payload:
+            raise ValueError("eval render expects JSON on stdin with an 'actions' array.")
+        if not isinstance(payload["actions"], list):
+            raise ValueError("eval render expects 'actions' to be a JSON array.")
+
+        locale = render.normalize_locale(config.load_config().get("locale"))
+        message = render.render_message(payload["actions"], locale=locale)
+
+        if getattr(args, "json", False):
+            print(json.dumps({"message": message}, ensure_ascii=False))
+        elif message is not None:
+            print(message)
+        return
+
     eval_engine.cli_eval(args)
 
 
@@ -446,6 +468,7 @@ def build_parser():
     p_eval_run.add_argument("--weather", help="JSON weather context")
     p_eval_run.add_argument("--dry-run", action="store_true", help="Don't update state")
     p_eval_status = eval_sub.add_parser("status", help="Quick status of what's due")
+    eval_sub.add_parser("render", help="Render reminder text from eval JSON on stdin")
     p_eval.set_defaults(func=cmd_eval)
 
     # lookup

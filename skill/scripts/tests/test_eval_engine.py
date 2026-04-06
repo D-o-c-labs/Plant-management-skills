@@ -34,6 +34,10 @@ JAN_CONTEXT = {
 
 
 class EvalEngineTest(unittest.TestCase):
+    def assert_action_display_names(self, action, *, location_name, sublocation_name=None):
+        self.assertEqual(action["locationDisplayName"], location_name)
+        self.assertEqual(action["subLocationDisplayName"], sublocation_name)
+
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
     def test_eval_closes_open_task_when_plant_is_no_longer_due(self, _mock_context):
         with plant_test_env():
@@ -110,6 +114,7 @@ class EvalEngineTest(unittest.TestCase):
             self.assertEqual(action["programId"], "neem_cycle")
             self.assertEqual(action["suggestedAction"], "apply_neem_oil")
             self.assertEqual(action["taskId"], f"neem_treatment:pest_recurring_programs:{plant['plantId']}:neem_cycle")
+            self.assert_action_display_names(action, location_name="Atrium House")
 
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
     def test_eval_keeps_multiple_programs_for_same_plant_distinct(self, _mock_context):
@@ -147,6 +152,8 @@ class EvalEngineTest(unittest.TestCase):
 
             self.assertEqual(result["summary"]["totalActions"], 2)
             self.assertEqual(len({action["taskId"] for action in result["actions"]}), 2)
+            for action in result["actions"]:
+                self.assert_action_display_names(action, location_name="Loft")
 
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
     def test_eval_repotting_uses_latest_anchor_and_preferred_window_for_due_at(self, _mock_context):
@@ -175,12 +182,19 @@ class EvalEngineTest(unittest.TestCase):
             action = result["actions"][0]
             self.assertEqual(action["type"], "repotting_check")
             self.assertEqual(action["dueAt"], "2026-04-01T00:00:00+00:00")
+            self.assert_action_display_names(action, location_name="Sunroom")
 
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
     def test_eval_reads_scalar_maintenance_cadence(self, _mock_context):
         with plant_test_env():
             registry.add_location(location_id="office", name="Office", loc_type="room")
-            plant = registry.add_plant(name="Pothos", location_id="office", indoor_outdoor="indoor")
+            registry.add_microzone(microzone_id="desk_corner", location_id="office", name="Desk Corner")
+            plant = registry.add_plant(
+                name="Pothos",
+                location_id="office",
+                sublocation_id="desk_corner",
+                indoor_outdoor="indoor",
+            )
             profiles.set_profile(
                 "maintenance",
                 plant["plantId"],
@@ -192,6 +206,7 @@ class EvalEngineTest(unittest.TestCase):
             self.assertEqual(result["summary"]["byType"]["maintenance_check"], 1)
             action = next(action for action in result["actions"] if action["type"] == "maintenance_check")
             self.assertEqual(action["dueAt"], FIXED_CONTEXT["evaluatedAt"])
+            self.assert_action_display_names(action, location_name="Office", sublocation_name="Desk Corner")
 
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
     def test_eval_reads_healthcheck_profiles(self, _mock_context):
@@ -208,6 +223,7 @@ class EvalEngineTest(unittest.TestCase):
 
             action = next(action for action in result["actions"] if action["type"] == "healthcheck_check")
             self.assertEqual(action["dueAt"], FIXED_CONTEXT["evaluatedAt"])
+            self.assert_action_display_names(action, location_name="Hall")
 
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=JAN_CONTEXT)
     def test_eval_pruning_windows_support_wraparound_months(self, _mock_context):
@@ -224,6 +240,7 @@ class EvalEngineTest(unittest.TestCase):
 
             action = next(action for action in result["actions"] if action["type"] == "pruning_check")
             self.assertEqual(action["dueAt"], "2025-11-01T00:00:00+00:00")
+            self.assert_action_display_names(action, location_name="Atrium")
 
     @patch("plant_mgmt.eval_engine.get_current_context", return_value=FIXED_CONTEXT)
     def test_eval_status_reports_projected_open_tasks(self, _mock_context):
