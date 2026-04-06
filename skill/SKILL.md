@@ -190,6 +190,20 @@ Messaging rules:
 - For 3+ plants or mixed actions, use a schematic grouped format
 - If `actions` is empty, stay quiet unless the user explicitly asked for status
 
+### Rendering
+
+```bash
+python3 scripts/plant_mgmt_cli.py --json eval run | python3 scripts/plant_mgmt_cli.py eval render
+python3 scripts/plant_mgmt_cli.py --json eval run | python3 scripts/plant_mgmt_cli.py --json eval render
+```
+
+The `eval render` command reads the full `eval run` result from stdin and produces a human-readable reminder message from the `actions` array.
+
+- Locale is resolved from `PLANT_LOCALE` / `config.locale` (default: `en`, supported: `en`, `it`)
+- `--json` wraps the result as `{"message": "..."}` or `{"message": null}`
+- Without `--json`, it prints raw text or nothing if there are no actions
+- The renderer only uses `actions`; `suppressedActions` and `noAction` are not rendered
+
 ### Lookup
 
 ```bash

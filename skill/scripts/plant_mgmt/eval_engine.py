@@ -856,6 +856,10 @@ def evaluate(*, weather=None, dry_run=False):
     push_config = cfg.get("pushPolicy", {})
 
     plants_data = store.read("plants.json")["plants"]
+    locations_data = store.read_or_default("locations.json").get("locations", [])
+    microzones_data = store.read_or_default("microzones.json").get("microzones", [])
+    loc_names = {loc["locationId"]: loc.get("displayName") for loc in locations_data}
+    mz_names = {mz["microzoneId"]: mz.get("displayName") for mz in microzones_data}
     care_rules = store.read("care_rules.json")["rules"]
     open_tasks = {task["taskId"]: task for task in reminders.list_tasks(status="open")}
 
@@ -923,6 +927,10 @@ def evaluate(*, weather=None, dry_run=False):
             state_changes["closed"].append(task_id)
             if not dry_run:
                 reminders.expire_task(task_id, reason="No longer due after evaluation")
+
+    for action in pushable_actions + suppressed_actions:
+        action["locationDisplayName"] = loc_names.get(action.get("locationId"))
+        action["subLocationDisplayName"] = mz_names.get(action.get("subLocationId"))
 
     result = {
         "evaluatedAt": ctx["evaluatedAt"],
