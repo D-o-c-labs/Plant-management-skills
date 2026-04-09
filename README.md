@@ -141,6 +141,7 @@ Behavior:
 
 - `init` copies seed files into `PLANT_DATA_DIR` and validates the result
 - `migrate` imports recognized files from an existing directory and initializes missing files from seeds
+- `validate` and `check` auto-repair recoverable legacy `reminder_state.json` payloads before reporting results
 - `check` reports missing files and validation results
 
 ### Plant Registry
@@ -224,6 +225,8 @@ python3 scripts/plant_mgmt_cli.py reminders cancel <taskId> [--reason "Heavy rai
 python3 scripts/plant_mgmt_cli.py reminders reset
 python3 scripts/plant_mgmt_cli.py reminders repair
 ```
+
+Validated reads of `reminder_state.json` are self-healing. If the file is in a recoverable legacy shape, normal runtime reads plus `validate` and `check` rewrite it to the current v2 schema and keep a `.bak` copy of the pre-repair file. Use `reminders repair` when you want to run the same normalization explicitly.
 
 Reminder task IDs are rule-scoped and may also include a program ID:
 
@@ -408,7 +411,7 @@ python3 scripts/plant_mgmt_cli.py validate
 python3 scripts/plant_mgmt_cli.py check
 ```
 
-Then inspect the schema named in the error output.
+Recoverable legacy `reminder_state.json` payloads now self-heal during validated reads, `validate`, and `check`, with the previous file saved as `reminder_state.json.bak`. If validation still fails after that, inspect the schema named in the error output.
 
 ### Empty evaluation result
 

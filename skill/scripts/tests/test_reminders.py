@@ -9,6 +9,7 @@ from plant_mgmt import events
 from plant_mgmt import profiles
 from plant_mgmt import registry
 from plant_mgmt import reminders
+from plant_mgmt import store
 from plant_mgmt_cli import build_parser
 
 
@@ -186,6 +187,59 @@ class RemindersTest(unittest.TestCase):
             self.assertEqual(reminder_state["version"], 2)
             self.assertIn(converted_task_id, reminder_state["tasks"])
             self.assertNotIn(f"neem:{plant['plantId']}", reminder_state["tasks"])
+
+    def test_store_read_auto_repairs_legacy_reminder_state_and_creates_backup(self):
+        with plant_test_env() as data_dir:
+            legacy_payload = {
+                "version": 1,
+                "tasks": {
+                    "neem:plant_001": {
+                        "taskId": "neem:plant_001",
+                        "type": "neem",
+                        "status": "open",
+                        "plantId": "plant_001",
+                        "locationId": "balcony",
+                        "createdAt": "2026-03-01T08:00:00+00:00",
+                    }
+                },
+                "meta": {},
+            }
+            reminder_path = data_dir / "reminder_state.json"
+            backup_path = data_dir / "reminder_state.json.bak"
+
+            write_json(reminder_path, legacy_payload)
+
+            repaired = store.read("reminder_state.json", validate=True)
+
+            self.assertEqual(repaired["version"], 2)
+            self.assertEqual(read_json(reminder_path)["version"], 2)
+            self.assertTrue(backup_path.exists())
+            self.assertEqual(read_json(backup_path)["version"], 1)
+
+    def test_validate_all_auto_repairs_legacy_reminder_state(self):
+        with plant_test_env() as data_dir:
+            write_json(
+                data_dir / "reminder_state.json",
+                {
+                    "version": 1,
+                    "tasks": {
+                        "neem:plant_001": {
+                            "taskId": "neem:plant_001",
+                            "type": "neem",
+                            "status": "open",
+                            "plantId": "plant_001",
+                            "locationId": "balcony",
+                            "createdAt": "2026-03-01T08:00:00+00:00",
+                        }
+                    },
+                    "meta": {},
+                },
+            )
+
+            results = store.validate_all()
+
+            self.assertEqual(results["reminder_state.json"], [])
+            self.assertEqual(read_json(data_dir / "reminder_state.json")["version"], 2)
 
     def test_reminders_cli_confirm_accepts_effective_time_flags(self):
         with plant_test_env():
