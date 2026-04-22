@@ -39,6 +39,38 @@ class RenderMessageTest(unittest.TestCase):
     def test_empty_actions_return_none(self):
         self.assertIsNone(render.render_message([]))
 
+    def test_auto_irrigation_summary_renders_without_actions(self):
+        message = render.render_message(
+            [],
+            locale="en",
+            auto_irrigation={
+                "emittedEvents": [
+                    {"eventId": "evt_1", "systemId": "main", "effectiveDateLocal": "2026-04-22", "plantCount": 2}
+                ],
+                "backfilledDates": ["2026-04-22"],
+                "skippedSystems": [],
+            },
+        )
+        self.assertEqual(message, "💧 Auto-irrigation logged for 2 plants (1 dates backfilled).")
+
+    def test_auto_irrigation_summary_is_prepended_to_actions(self):
+        message = render.render_message(
+            [_action("Basil")],
+            locale="en",
+            auto_irrigation={
+                "emittedEvents": [
+                    {"eventId": "evt_1", "systemId": "main", "effectiveDateLocal": "2026-04-22", "plantCount": 2}
+                ],
+                "backfilledDates": ["2026-04-22"],
+                "skippedSystems": [],
+            },
+        )
+        self.assertEqual(
+            message,
+            "💧 Auto-irrigation logged for 2 plants (1 dates backfilled).\n\n"
+            "💧 Probable watering for Basil at Kitchen.",
+        )
+
     def test_locale_normalization_falls_back_to_english(self):
         self.assertEqual(render.normalize_locale("it-IT"), "it")
         self.assertEqual(render.normalize_locale("fr-FR"), "en")
@@ -190,6 +222,32 @@ class RenderCliTest(unittest.TestCase):
 
             payload = json.loads(stdout.getvalue())
             self.assertEqual(payload, {"message": "💧 Probable watering for Basil at Kitchen."})
+
+    def test_eval_render_passes_auto_irrigation_payload(self):
+        with plant_test_env():
+            parser = build_parser()
+            args = parser.parse_args(["eval", "render"])
+            stdin = io.StringIO(json.dumps({
+                "actions": [],
+                "autoIrrigation": {
+                    "emittedEvents": [
+                        {
+                            "eventId": "evt_1",
+                            "systemId": "main",
+                            "effectiveDateLocal": "2026-04-22",
+                            "plantCount": 3,
+                        }
+                    ],
+                    "backfilledDates": ["2026-04-22"],
+                    "skippedSystems": [],
+                },
+            }))
+            stdout = io.StringIO()
+
+            with patch("sys.stdin", stdin), redirect_stdout(stdout):
+                args.func(args)
+
+            self.assertEqual(stdout.getvalue(), "💧 Auto-irrigation logged for 3 plants (1 dates backfilled).\n")
 
     def test_eval_render_invalid_json_exits_with_stderr_message(self):
         with plant_test_env():

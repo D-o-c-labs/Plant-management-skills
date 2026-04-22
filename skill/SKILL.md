@@ -29,6 +29,7 @@ Use this skill to manage household plants through the validated Python CLI. The 
 - If the user gives a clear, specific write request, run the matching CLI mutation directly. Ask only when the target or effect is genuinely ambiguous.
 - Treat `init --force`, `migrate`, broad inferred multi-plant writes, and unclear archive operations as higher-risk changes that may need confirmation.
 - For questions about due work, reminders, or current status, use evaluation output as the source of truth before improvising.
+- For diagnosis questions involving pests, deficiencies, disease, soil, or treatment supplies, query `products` before recommending that the user buy something.
 - If the user is reporting completed care from a reminder-driven task, resolve the reminder when there is exactly one obvious open match. If there is no matching reminder, use `events log`.
 - Use external `lookup` commands only when the species or care details are unclear. If API keys are unavailable, continue with the best confirmed local information.
 - Routine CLI writes already validate before saving. Run `validate` or `check` explicitly only for setup, migration, repair, or diagnosis.
@@ -77,7 +78,10 @@ python3 scripts/plant_mgmt_cli.py --json eval run | python3 scripts/plant_mgmt_c
 - `suppressedActions`: due items blocked by push policy
 - `noAction`: evaluated plants that are not due
 - `stateChanges`: tasks opened, updated, or closed by this evaluation
+- `autoIrrigation`: automatic watering confirmations emitted or skipped before rule evaluation
 - `summary`: counts
+
+Automatic irrigation events are logged before care rules run, so normal watering reminders self-silence for plants covered by a working enabled system. The auto schedule uses only previous auto-irrigation events as its anchor; manual `watering_confirmed` events do not move the system schedule.
 
 Interpretation:
 
@@ -170,6 +174,20 @@ python3 scripts/plant_mgmt_cli.py locations update <locationId> --data '{"notes"
 ```
 
 ```bash
+python3 scripts/plant_mgmt_cli.py irrigation list
+python3 scripts/plant_mgmt_cli.py irrigation get <systemId>
+python3 scripts/plant_mgmt_cli.py irrigation update <systemId> --data '{"autoSchedule":{"cadenceDays":3,"skipOnRain":true}}'
+```
+
+An irrigation system `autoSchedule` enables automatic `watering_confirmed` logging during `eval run` for eligible plants. Eligible plants must have `irrigationSystemId` matching the system, `attachedToIrrigation: true`, status `active` or `recovering`, no manual exception on the system, and `irrigationMode` other than `manual`.
+
+`autoSchedule` fields:
+
+- `cadenceDays`: required default automatic watering cadence
+- `skipOnRain`: optional boolean; skips today's auto-event when provided weather has `"condition":"rain"`
+- `seasonalSchedule`: optional per-season overrides for `winter`, `spring`, `summer`, and `autumn`; each season can set `enabled` and `cadenceDays`
+
+```bash
 python3 scripts/plant_mgmt_cli.py profiles list watering [--plant <plantId>]
 python3 scripts/plant_mgmt_cli.py profiles get watering <plantId-or-profileId>
 python3 scripts/plant_mgmt_cli.py profiles set watering <plantId> --data '{"baselineSource":"container citrus","seasonalBaseline":{"winter":{"level":"low","baseIntervalDays":[10,14]},"spring":{"level":"medium","baseIntervalDays":[5,8]},"summer":{"level":"high","baseIntervalDays":[2,4]},"autumn":{"level":"medium","baseIntervalDays":[6,9]}}}'
@@ -180,7 +198,37 @@ Supported profile types: `watering`, `fertilization`, `repotting`, `pest`, `main
 
 Profile IDs are supported, but by default a profile’s `profileId` equals its `plantId`. The plant record stores the linked profile ID in fields like `wateringProfileId`.
 
-### 4. Onboard a new plant
+### 4. Product inventory and diagnosis
+
+Use `products` to store owned pesticides, fungicides, fertilizers, soil amendments, substrates, tools, and other supplies. Prefer this registry when the user asks whether they already have something suitable.
+
+```bash
+python3 scripts/plant_mgmt_cli.py --json products list [--category pesticide] [--target-issue spider_mites]
+python3 scripts/plant_mgmt_cli.py products get product_001
+python3 scripts/plant_mgmt_cli.py products add --display-name "Olio di neem BioGarden" --category pesticide --description "Olio di neem puro 100%" --target-issues spider_mites,aphids [--photo-file /path/to/photo.jpg] [--notes "..."]
+python3 scripts/plant_mgmt_cli.py products update product_001 --data '{"notes":"Use in evening only"}'
+python3 scripts/plant_mgmt_cli.py products remove product_001
+```
+
+Product categories: `pesticide`, `fungicide`, `fertilizer`, `soil_amendment`, `substrate`, `tool`, `other`.
+
+Product photos are copied into `$PLANT_DATA_DIR/media/products/`; the stored `photoPath` is relative to `$PLANT_DATA_DIR`.
+
+Canonical `targetIssues` keys:
+
+`spider_mites, aphids, whitefly, thrips, scale_insects, mealybugs, fungus_gnats, powdery_mildew, downy_mildew, root_rot, leaf_spot, rust, iron_deficiency, nitrogen_deficiency, potassium_deficiency, magnesium_deficiency, sunburn, frost_damage, overwatering, underwatering`
+
+Use these exact keys where applicable. Add new target issue keys only in snake_case English. Keep full label and usage context in `description` so fallback text search remains useful.
+
+Diagnosis flow:
+
+1. Identify the likely issue from the user's photo or description.
+2. Normalize it to a canonical key, such as Italian “ragnetti rossi” -> `spider_mites`.
+3. Run `python3 scripts/plant_mgmt_cli.py --json products list --target-issue <key> --category <likely-category>`.
+4. If products match, recommend from inventory with appropriate caution.
+5. If no product matches, run `python3 scripts/plant_mgmt_cli.py --json products list` and scan `description` fields before concluding there is no suitable owned product.
+
+### 5. Onboard a new plant
 
 When adding new plants:
 
@@ -209,7 +257,7 @@ Lookup cascade:
 
 Lookup results are cached in `$PLANT_DATA_DIR/lookup_cache.json`.
 
-### 5. Setup, validation, and recovery
+### 6. Setup, validation, and recovery
 
 Use these for initialization, migration, or diagnosis:
 
@@ -254,6 +302,7 @@ python3 scripts/plant_mgmt_cli.py <command> <subcommand> --help
 - Each profile file stores one profile object per plant by default.
 - `care_rules.json` contains generic evaluator bindings between rule engines, profile families, and task behavior.
 - `pest_profiles.json` can contain `recurringPrograms` such as neem cycles or other preventive/treatment routines.
+- `products.json` stores owned plant-care products, target issue tags, and optional photo paths.
 - `reminder_state.json` tracks active and historical tasks.
 - `events.json` records care history.
 

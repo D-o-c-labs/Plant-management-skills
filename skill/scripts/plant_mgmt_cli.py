@@ -241,6 +241,12 @@ def cmd_events(args):
     events.cli_events(args)
 
 
+def cmd_products(args):
+    """Product inventory operations."""
+    from plant_mgmt import products
+    products.cli_products(args)
+
+
 def cmd_reminders(args):
     """Reminder operations."""
     from plant_mgmt import reminders
@@ -264,7 +270,11 @@ def cmd_eval(args):
             raise ValueError("eval render expects 'actions' to be a JSON array.")
 
         locale = render.normalize_locale(config.load_config().get("locale"))
-        message = render.render_message(payload["actions"], locale=locale)
+        message = render.render_message(
+            payload["actions"],
+            locale=locale,
+            auto_irrigation=payload.get("autoIrrigation"),
+        )
 
         if getattr(args, "json", False):
             print(json.dumps({"message": message}, ensure_ascii=False))
@@ -442,6 +452,34 @@ def build_parser():
     p_evt_last.add_argument("plantId", help="Plant ID")
     p_evt_last.add_argument("--type", help="Filter by event type")
     p_evt.set_defaults(func=cmd_events)
+
+    # products
+    p_prod = sub.add_parser("products", help="Product inventory operations")
+    prod_sub = p_prod.add_subparsers(dest="subcmd")
+    p_prod_list = prod_sub.add_parser("list", help="List products")
+    p_prod_list.add_argument("--category", help="Filter by product category")
+    p_prod_list.add_argument("--target-issue", help="Filter by target issue key")
+    p_prod_get = prod_sub.add_parser("get", help="Get product details")
+    p_prod_get.add_argument("productId", help="Product ID")
+    p_prod_add = prod_sub.add_parser("add", help="Add a product")
+    p_prod_add.add_argument("--display-name", required=True, help="Display name")
+    p_prod_add.add_argument("--category", required=True, help="Product category")
+    p_prod_add.add_argument("--description", required=True, help="Product description")
+    p_prod_add.add_argument("--target-issues", help="Comma-separated issue keys")
+    p_prod_add.add_argument("--photo-file", help="Source photo file to copy into media/products")
+    p_prod_add.add_argument("--notes", help="Notes")
+    p_prod_update = prod_sub.add_parser("update", help="Update product fields")
+    p_prod_update.add_argument("productId", help="Product ID")
+    p_prod_update.add_argument("--data", help="JSON object with fields to update")
+    p_prod_update.add_argument("--display-name", help="Display name")
+    p_prod_update.add_argument("--category", help="Product category")
+    p_prod_update.add_argument("--description", help="Product description")
+    p_prod_update.add_argument("--target-issues", help="Comma-separated issue keys")
+    p_prod_update.add_argument("--photo-file", help="Replacement source photo file")
+    p_prod_update.add_argument("--notes", help="Notes")
+    p_prod_remove = prod_sub.add_parser("remove", help="Remove a product")
+    p_prod_remove.add_argument("productId", help="Product ID")
+    p_prod.set_defaults(func=cmd_products)
 
     # reminders
     p_rem = sub.add_parser("reminders", help="Reminder operations")

@@ -831,6 +831,220 @@ def _eval_profile_month_window(plants_data, rule, ctx, cfg):
 
 
 # ---------------------------------------------------------------------------
+# Auto-irrigation pre-pass
+# ---------------------------------------------------------------------------
+
+def _parse_local_date(value):
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _season_for_date(value):
+    return get_season(value.month)
+
+
+def _auto_schedule_for_date(system, run_date):
+    schedule = system.get("autoSchedule")
+    if not schedule:
+        return None
+
+    season = _season_for_date(run_date)
+    seasonal_schedule = schedule.get("seasonalSchedule") or {}
+    season_entry = seasonal_schedule.get(season)
+    if season_entry is not None:
+        if season_entry.get("enabled", True) is False:
+            return {"enabled": False, "cadenceDays": None, "season": season}
+        cadence_days = season_entry.get("cadenceDays") or schedule.get("cadenceDays")
+    else:
+        cadence_days = schedule.get("cadenceDays")
+
+    return {
+        "enabled": True,
+        "cadenceDays": cadence_days,
+        "season": season,
+    }
+
+
+def _auto_irrigation_events_for_system(system_id, tz_name):
+    all_events = events.list_events(limit=0, tz_name=tz_name)
+    return [
+        event
+        for event in all_events
+        if event.get("type") == "watering_confirmed"
+        and (event.get("details") or {}).get("auto") is True
+        and (event.get("details") or {}).get("irrigationSystemId") == system_id
+    ]
+
+
+def _last_auto_irrigation_date(system_id, tz_name):
+    matching = _auto_irrigation_events_for_system(system_id, tz_name)
+    if not matching:
+        return None
+    latest = max(matching, key=lambda event: _event_sort_key(event, tz_name))
+    return _parse_local_date(latest.get("effectiveDateLocal"))
+
+
+def _existing_auto_irrigation_dates(system_id, tz_name):
+    dates = set()
+    for event in _auto_irrigation_events_for_system(system_id, tz_name):
+        effective_date = _parse_local_date(event.get("effectiveDateLocal"))
+        if effective_date:
+            dates.add(effective_date)
+    return dates
+
+
+def _eligible_auto_irrigation_plant_ids(plants_data, system):
+    system_id = system["irrigationSystemId"]
+    exceptions = set(system.get("manualExceptionPlantIds") or [])
+    plant_ids = []
+    for plant in plants_data:
+        if plant.get("irrigationSystemId") != system_id:
+            continue
+        if plant.get("attachedToIrrigation") is not True:
+            continue
+        if plant.get("plantId") in exceptions:
+            continue
+        if plant.get("status") not in {"active", "recovering"}:
+            continue
+        if plant.get("irrigationMode") == "manual":
+            continue
+        plant_ids.append(plant["plantId"])
+    return plant_ids
+
+
+def _missed_auto_irrigation_dates(system, last_run_date, evaluated_date):
+    cap_start = evaluated_date - timedelta(days=30)
+    anchor_date = last_run_date or cap_start
+    cursor = anchor_date
+    missed_dates = []
+
+    while True:
+        schedule = _auto_schedule_for_date(system, cursor)
+        cadence_days = (schedule or {}).get("cadenceDays") or (system.get("autoSchedule") or {}).get("cadenceDays")
+        if not cadence_days:
+            return missed_dates
+
+        candidate = cursor + timedelta(days=cadence_days)
+        if candidate > evaluated_date:
+            return missed_dates
+
+        if candidate >= cap_start:
+            missed_dates.append(candidate)
+        cursor = candidate
+
+
+def _is_today_rain_skip(system, ctx, run_date, evaluated_date):
+    schedule = system.get("autoSchedule") or {}
+    weather = ctx.get("weather") or {}
+    condition = str(weather.get("condition", "")).strip().lower()
+    return (
+        schedule.get("skipOnRain") is True
+        and run_date == evaluated_date
+        and condition == "rain"
+    )
+
+
+def _run_auto_irrigation(data_dir, ctx, dry_run):
+    """Emit automatic watering confirmations before care rules evaluate."""
+    del data_dir  # Store helpers resolve PLANT_DATA_DIR internally.
+
+    report = {
+        "emittedEvents": [],
+        "backfilledDates": [],
+        "skippedSystems": [],
+    }
+    backfilled_dates = set()
+    tz_name = ctx.get("timezone") or config.load_config().get("timezone", "UTC")
+    evaluated_at = _parse_iso(ctx["evaluatedAt"])
+    if evaluated_at is None:
+        return report
+    evaluated_date = evaluated_at.date()
+
+    systems = store.read_or_default("irrigation_systems.json").get("irrigationSystems", [])
+    plants_data = store.read("plants.json")["plants"]
+
+    for system in systems:
+        system_id = system["irrigationSystemId"]
+        if system.get("enabled") is not True:
+            if system.get("autoSchedule") is not None:
+                report["skippedSystems"].append(
+                    {"systemId": system_id, "reason": "enabled=false"}
+                )
+            continue
+        if not system.get("autoSchedule"):
+            continue
+
+        existing_dates = _existing_auto_irrigation_dates(system_id, tz_name)
+        last_run_date = max(existing_dates) if existing_dates else _last_auto_irrigation_date(system_id, tz_name)
+        for run_date in _missed_auto_irrigation_dates(system, last_run_date, evaluated_date):
+            if run_date in existing_dates:
+                continue
+
+            schedule = _auto_schedule_for_date(system, run_date)
+            if schedule and schedule.get("enabled") is False:
+                report["skippedSystems"].append(
+                    {
+                        "systemId": system_id,
+                        "reason": "season_disabled",
+                        "date": run_date.isoformat(),
+                        "season": schedule.get("season"),
+                    }
+                )
+                continue
+
+            if _is_today_rain_skip(system, ctx, run_date, evaluated_date):
+                report["skippedSystems"].append(
+                    {
+                        "systemId": system_id,
+                        "reason": "weather_rain",
+                        "date": run_date.isoformat(),
+                    }
+                )
+                continue
+
+            plant_ids = _eligible_auto_irrigation_plant_ids(plants_data, system)
+            if not plant_ids:
+                report["skippedSystems"].append(
+                    {
+                        "systemId": system_id,
+                        "reason": "no_eligible_plants",
+                        "date": run_date.isoformat(),
+                    }
+                )
+                continue
+
+            event_id = None
+            if not dry_run:
+                event = events.log_event(
+                    event_type="watering_confirmed",
+                    source="auto_irrigation",
+                    plant_ids=plant_ids,
+                    scope=f"auto_irrigation:{system_id}",
+                    details={"irrigationSystemId": system_id, "auto": True},
+                    effective_date=run_date.isoformat(),
+                    effective_precision="day",
+                )
+                event_id = event["eventId"]
+
+            report["emittedEvents"].append(
+                {
+                    "eventId": event_id,
+                    "systemId": system_id,
+                    "effectiveDateLocal": run_date.isoformat(),
+                    "plantCount": len(plant_ids),
+                }
+            )
+            backfilled_dates.add(run_date.isoformat())
+
+    report["backfilledDates"] = sorted(backfilled_dates)
+    return report
+
+
+# ---------------------------------------------------------------------------
 # Main evaluation
 # ---------------------------------------------------------------------------
 
@@ -854,6 +1068,7 @@ def evaluate(*, weather=None, dry_run=False):
     tz_name = cfg.get("timezone", "UTC")
     ctx = get_current_context(weather=weather, tz_name=tz_name)
     push_config = cfg.get("pushPolicy", {})
+    auto_irrigation = _run_auto_irrigation(config.get_data_dir(), ctx, dry_run)
 
     plants_data = store.read("plants.json")["plants"]
     locations_data = store.read_or_default("locations.json").get("locations", [])
@@ -939,6 +1154,7 @@ def evaluate(*, weather=None, dry_run=False):
         "suppressedActions": suppressed_actions,
         "noAction": all_no_action,
         "stateChanges": state_changes,
+        "autoIrrigation": auto_irrigation,
         "dryRun": dry_run,
         "summary": {
             "totalActions": len(pushable_actions),

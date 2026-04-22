@@ -19,6 +19,7 @@ REQUIRED_FILES = [
     "fertilization_profiles.json",
     "repotting_profiles.json",
     "pest_profiles.json",
+    "products.json",
     "maintenance_profiles.json",
     "healthcheck_profiles.json",
     "care_rules.json",

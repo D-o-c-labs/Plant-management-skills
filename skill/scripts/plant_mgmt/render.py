@@ -34,12 +34,14 @@ _LOCALE_TEXT = {
         "sentence": "{label} for {plant_list} at {location}.",
         "critical_prefix": "⚠️ Urgent: {label}",
         "urgent_tag": "⚠️ urgent",
+        "auto_irrigation": "💧 Auto-irrigation logged for {plant_count} plants ({date_count} dates backfilled).",
     },
     "it": {
         "and": "e",
         "sentence": "{label} per {plant_list} a {location}.",
         "critical_prefix": "⚠️ Urgente: {label}",
         "urgent_tag": "⚠️ urgente",
+        "auto_irrigation": "💧 Irrigazione automatica registrata per {plant_count} piante ({date_count} date recuperate).",
     },
 }
 
@@ -144,12 +146,33 @@ def _build_groups(actions: list[dict], locale: str) -> list[dict]:
     )
 
 
-def render_message(actions: list[dict], *, locale: str = "en") -> str | None:
-    """Render a grouped reminder message from evaluation actions."""
-    if not actions:
+def _render_auto_irrigation_summary(auto_irrigation: dict | None, locale: str) -> str | None:
+    if not auto_irrigation:
+        return None
+    emitted_events = auto_irrigation.get("emittedEvents") or []
+    if not emitted_events:
         return None
 
+    plant_count = sum(event.get("plantCount") or 0 for event in emitted_events)
+    date_count = len(auto_irrigation.get("backfilledDates") or [])
+    return _LOCALE_TEXT[locale]["auto_irrigation"].format(
+        plant_count=plant_count,
+        date_count=date_count,
+    )
+
+
+def render_message(
+    actions: list[dict],
+    *,
+    locale: str = "en",
+    auto_irrigation: dict | None = None,
+) -> str | None:
+    """Render a grouped reminder message from evaluation actions."""
     locale = normalize_locale(locale)
+    auto_summary = _render_auto_irrigation_summary(auto_irrigation, locale)
+    if not actions:
+        return auto_summary
+
     groups = _build_groups(actions, locale)
     text = _LOCALE_TEXT[locale]
 
@@ -160,11 +183,14 @@ def render_message(actions: list[dict], *, locale: str = "en") -> str | None:
             if group["all_critical"]:
                 label = text["critical_prefix"].format(label=label)
             plant_list = _join_plant_names([_plant_name(action) for action in group["actions"]], locale)
-            return text["sentence"].format(
+            message = text["sentence"].format(
                 label=label,
                 plant_list=plant_list,
                 location=group["location"],
             )
+            if auto_summary:
+                return f"{auto_summary}\n\n{message}"
+            return message
 
     blocks = []
     for group in groups:
@@ -180,4 +206,7 @@ def render_message(actions: list[dict], *, locale: str = "en") -> str | None:
             lines.append(f"  • {plant_line}")
         blocks.append("\n".join(lines))
 
-    return "\n\n".join(blocks)
+    message = "\n\n".join(blocks)
+    if auto_summary:
+        return f"{auto_summary}\n\n{message}"
+    return message

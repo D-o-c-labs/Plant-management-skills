@@ -58,6 +58,35 @@
           "type": ["string", "null"],
           "description": "Description of the default schedule when running normally."
         },
+        "autoSchedule": {
+          "type": ["object", "null"],
+          "description": "Structured schedule used by eval run to log automatic watering confirmations for attached plants.",
+          "additionalProperties": false,
+          "required": ["cadenceDays"],
+          "properties": {
+            "cadenceDays": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Default number of days between automatic irrigation runs."
+            },
+            "skipOnRain": {
+              "type": "boolean",
+              "default": false,
+              "description": "Skip today's auto event when current weather is rain."
+            },
+            "seasonalSchedule": {
+              "type": ["object", "null"],
+              "description": "Optional per-season overrides for automatic irrigation.",
+              "additionalProperties": false,
+              "properties": {
+                "winter": { "$ref": "#/$defs/seasonEntry" },
+                "spring": { "$ref": "#/$defs/seasonEntry" },
+                "summer": { "$ref": "#/$defs/seasonEntry" },
+                "autumn": { "$ref": "#/$defs/seasonEntry" }
+              }
+            }
+          }
+        },
         "seasonProfile": {
           "type": ["string", "null"],
           "description": "Current seasonal configuration state, e.g. 'summer_active', 'not_configured'."
@@ -101,6 +130,23 @@
         "notes": {
           "type": ["string", "null"],
           "description": "Free-text notes about this irrigation system."
+        }
+      }
+    },
+    "seasonEntry": {
+      "type": "object",
+      "description": "Per-season automatic irrigation schedule override.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether automatic irrigation runs during this season."
+        },
+        "cadenceDays": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Season-specific number of days between automatic irrigation runs."
         }
       }
     }

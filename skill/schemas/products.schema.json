@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "products.schema.json",
+  "title": "Product Inventory",
+  "description": "Inventory of plant-care products owned by the user.",
+  "type": "object",
+  "required": ["version", "nextProductNumericId", "products"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatibility checks."
+    },
+    "nextProductNumericId": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Auto-incrementing counter used to mint the next product_NNN id."
+    },
+    "products": {
+      "type": "array",
+      "description": "Array of product inventory records.",
+      "items": {
+        "$ref": "#/$defs/product"
+      }
+    }
+  },
+  "$defs": {
+    "product": {
+      "type": "object",
+      "required": [
+        "productId",
+        "displayName",
+        "category",
+        "description",
+        "targetIssues",
+        "photoPath",
+        "notes",
+        "addedAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "productId": {
+          "type": "string",
+          "pattern": "^product_\\d{3,}$",
+          "description": "Unique product identifier, e.g. product_001."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable product name."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "pesticide",
+            "fungicide",
+            "fertilizer",
+            "soil_amendment",
+            "substrate",
+            "tool",
+            "other"
+          ],
+          "description": "Product category."
+        },
+        "description": {
+          "type": "string",
+          "description": "Free-text product details, active ingredients, label notes, and usage context."
+        },
+        "targetIssues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "description": "Issue keys this product can help with."
+        },
+        "photoPath": {
+          "type": ["string", "null"],
+          "description": "Optional product photo path relative to PLANT_DATA_DIR."
+        },
+        "notes": {
+          "type": ["string", "null"],
+          "description": "Free-text inventory notes."
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 UTC timestamp when the product was added."
+        }
+      }
+    }
+  }
+}

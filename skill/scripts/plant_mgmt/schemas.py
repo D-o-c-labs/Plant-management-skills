@@ -21,6 +21,7 @@ SCHEMA_MAP = {
     "fertilization_profiles.json": "fertilization_profiles.schema.json",
     "repotting_profiles.json": "repotting_profiles.schema.json",
     "pest_profiles.json": "pest_profiles.schema.json",
+    "products.json": "products.schema.json",
     "maintenance_profiles.json": "maintenance_profiles.schema.json",
     "healthcheck_profiles.json": "healthcheck_profiles.schema.json",
     "care_rules.json": "care_rules.schema.json",

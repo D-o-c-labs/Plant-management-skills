@@ -11,6 +11,7 @@ Core responsibilities:
 - Plant registry CRUD
 - Location, microzone, and irrigation metadata
 - Care profile storage
+- Product inventory for plant-care supplies
 - Event logging
 - Reminder state management
 - Deterministic care evaluation
@@ -170,7 +171,35 @@ python3 scripts/plant_mgmt_cli.py microzones update <microzoneId> --data '{"heat
 python3 scripts/plant_mgmt_cli.py irrigation list
 python3 scripts/plant_mgmt_cli.py irrigation get <systemId>
 python3 scripts/plant_mgmt_cli.py irrigation update <systemId> --data '{"enabled":false}'
+python3 scripts/plant_mgmt_cli.py irrigation update <systemId> --data '{"autoSchedule":{"cadenceDays":3,"skipOnRain":true}}'
 ```
+
+Irrigation systems may include an optional `autoSchedule` object. When present on an enabled system, `eval run` logs automatic `watering_confirmed` events for eligible attached plants before normal reminder rules run. Eligible plants must be attached to the system, active or recovering, not listed in `manualExceptionPlantIds`, and not set to `irrigationMode: "manual"`.
+
+`autoSchedule` supports:
+
+- `cadenceDays`: default automatic watering cadence
+- `skipOnRain`: skip today's automatic event when supplied weather has `"condition":"rain"`
+- `seasonalSchedule`: optional `winter`, `spring`, `summer`, and `autumn` entries with `enabled` and `cadenceDays`
+
+Season entries override the top-level cadence for that season. If a season entry has `"enabled": false`, no automatic watering event is logged during that season.
+
+### Product Inventory
+
+Use `products` to track owned pesticides, fungicides, fertilizers, substrates, tools, and related supplies. Product photos are copied under `media/products/` inside `PLANT_DATA_DIR`, and `photoPath` stores the relative path.
+
+```bash
+python3 scripts/plant_mgmt_cli.py products list [--category pesticide] [--target-issue spider_mites]
+python3 scripts/plant_mgmt_cli.py products get <productId>
+python3 scripts/plant_mgmt_cli.py products add --display-name "Olio di neem BioGarden" --category pesticide --description "Olio di neem puro 100%" --target-issues spider_mites,aphids [--photo-file /path/to/photo.jpg] [--notes "..."]
+python3 scripts/plant_mgmt_cli.py products update <productId> --description "Updated label notes" --target-issues spider_mites,aphids
+python3 scripts/plant_mgmt_cli.py products update <productId> --data '{"notes":"Use in evening only"}'
+python3 scripts/plant_mgmt_cli.py products remove <productId>
+```
+
+Product categories are `pesticide`, `fungicide`, `fertilizer`, `soil_amendment`, `substrate`, `tool`, and `other`.
+
+Canonical `targetIssues` keys are: `spider_mites`, `aphids`, `whitefly`, `thrips`, `scale_insects`, `mealybugs`, `fungus_gnats`, `powdery_mildew`, `downy_mildew`, `root_rot`, `leaf_spot`, `rust`, `iron_deficiency`, `nitrogen_deficiency`, `potassium_deficiency`, `magnesium_deficiency`, `sunburn`, `frost_damage`, `overwatering`, `underwatering`. Add new issue keys only as snake_case English terms.
 
 ### Profiles
 
@@ -248,9 +277,10 @@ python3 scripts/plant_mgmt_cli.py --json eval run | python3 scripts/plant_mgmt_c
 - `suppressedActions`: due tasks blocked by push policy
 - `noAction`: evaluated plants that are not due
 - `stateChanges`: tasks opened, updated, or closed
+- `autoIrrigation`: automatic watering confirmations emitted or skipped before rule evaluation
 - `summary`: aggregate counts
 
-The evaluator now closes open reminder tasks that are no longer due.
+The evaluator now closes open reminder tasks that are no longer due. Automatic irrigation events intentionally use only prior auto-irrigation events as their schedule anchor; manual watering events do not shift the system schedule.
 `eval render` converts the `actions` array into a localized reminder message using `PLANT_LOCALE` / `config.locale` (supported: `en`, `it`; unsupported locales fall back to English). Without `--json` it prints raw text, and with `--json` it returns `{"message": ...}`.
 
 Seed behavior:
@@ -300,6 +330,7 @@ Each runtime data file has a matching schema in `schemas/`:
 - `fertilization_profiles.json`
 - `repotting_profiles.json`
 - `pest_profiles.json`
+- `products.json`
 - `maintenance_profiles.json`
 - `healthcheck_profiles.json`
 - `care_rules.json`
@@ -315,6 +346,7 @@ Important files in `PLANT_DATA_DIR`:
 - `care_rules.json`: enabled/disabled evaluation rules
 - `reminder_state.json`: open and historical reminder tasks
 - `events.json`: care history
+- `products.json`: owned plant-care products and target issue tags
 - `lookup_cache.json`: cached external lookup results
 
 ## Agent Usage Guidance
